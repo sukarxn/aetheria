@@ -3,10 +3,15 @@ import Sidebar from './components/Sidebar';
 import TaskPlanner from './components/TaskPlanner';
 import DocumentViewer from './components/DocumentViewer';
 import TemplateSelection from './components/TemplateSelection';
+import LoginPage from './components/LoginPage';
 import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult } from './types';
 import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection } from './services/geminiService';
 
 const App = () => {
+  // Auth State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
+
   // Config State
   const [config, setConfig] = useState<ResearchConfig>({
     topic: '',
@@ -130,6 +135,13 @@ const App = () => {
   };
 
   // RENDER FLOW
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={(role) => {
+      setUserRole(role);
+      setIsLoggedIn(true);
+    }} />;
+  }
+
   if (!hasSelectedTemplate) {
     return <TemplateSelection onSelect={handleTemplateSelect} />;
   }
