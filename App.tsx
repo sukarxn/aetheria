@@ -116,6 +116,18 @@ const App = () => {
       }
   };
 
+  // 5. Regenerate Knowledge Graph
+  const handleRegenerateGraph = async () => {
+    if (!result) return;
+    try {
+      const newGraphData = await generateKnowledgeGraph(result.markdown);
+      setResult(prev => prev ? ({ ...prev, graph: newGraphData }) : null);
+    } catch (e) {
+      console.error(e);
+      alert("Error regenerating knowledge graph. Please try again.");
+    }
+  };
+
   // RENDER FLOW
   if (!hasSelectedTemplate) {
     return <TemplateSelection onSelect={handleTemplateSelect} />;
@@ -163,6 +175,7 @@ const App = () => {
                     metrics={result.review}
                     graphData={result.graph}
                     onRefine={handleRefine}
+                    onRegenerateGraph={handleRegenerateGraph}
                 />
             </div>
         )}

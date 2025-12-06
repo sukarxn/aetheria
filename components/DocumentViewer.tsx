@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ReviewMetrics, GraphData } from '../types';
-import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight } from 'lucide-react';
+import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
 
 interface DocumentViewerProps {
@@ -8,9 +8,10 @@ interface DocumentViewerProps {
   metrics: ReviewMetrics | null;
   graphData: GraphData | null;
   onRefine: (instruction: string) => Promise<void>;
+  onRegenerateGraph?: () => Promise<void>;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph }) => {
   const [refineInput, setRefineInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
@@ -18,6 +19,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graph
   const [showSuggestedQuestions, setShowSuggestedQuestions] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [isRegeneratingGraph, setIsRegeneratingGraph] = useState(false);
 
   const handleRefine = async () => {
     if (!refineInput) return;
@@ -77,6 +79,18 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
   const handleQuestionClick = (question: string) => {
     setRefineInput(question);
     setShowSuggestedQuestions(false);
+  };
+
+  const handleRegenerateGraph = async () => {
+    if (!onRegenerateGraph) return;
+    setIsRegeneratingGraph(true);
+    try {
+      await onRegenerateGraph();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRegeneratingGraph(false);
+    }
   };
 
   const handlePrint = () => {
@@ -246,9 +260,19 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
                         </h3>
                         <p className="text-xs text-slate-500">Visualizing entity relationships extracted from the text</p>
                       </div>
-                      <button onClick={() => setShowGraph(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                          <X className="w-6 h-6 text-slate-500" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={handleRegenerateGraph}
+                          disabled={isRegeneratingGraph}
+                          title="Regenerate knowledge graph"
+                          className="p-2 hover:bg-teal-50 text-slate-500 hover:text-teal-600 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <RotateCcw className={`w-5 h-5 ${isRegeneratingGraph ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button onClick={() => setShowGraph(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                            <X className="w-6 h-6 text-slate-500" />
+                        </button>
+                      </div>
                   </div>
                   <div className="flex-1 bg-slate-50 relative">
                       <KnowledgeGraph data={graphData} />
