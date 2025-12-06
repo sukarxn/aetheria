@@ -28,6 +28,7 @@ const App = () => {
   const [hasSelectedTemplate, setHasSelectedTemplate] = useState(false);
   const [step, setStep] = useState<'setup' | 'planning' | 'results'>('setup');
   const [loading, setLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Data State
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -142,9 +143,10 @@ const App = () => {
         onReset={handleReset}
         isGenerating={loading && step === 'setup'}
         step={step}
+        onCollapsedChange={setSidebarCollapsed}
       />
       
-      <main className="ml-[420px] flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300">
+      <main className={`flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-[420px]'}`}>
         
         {step === 'setup' && (
              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-12 animate-fade-in">

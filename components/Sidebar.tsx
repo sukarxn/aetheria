@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ResearchTemplate, DataSource, AgentRole, ResearchConfig } from '../types';
-import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight } from 'lucide-react';
+import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft } from 'lucide-react';
 
 interface SidebarProps {
   config: ResearchConfig;
@@ -9,10 +9,17 @@ interface SidebarProps {
   onReset: () => void;
   isGenerating: boolean;
   step: 'setup' | 'planning' | 'results';
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleCollapse = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    onCollapsedChange?.(collapsed);
+  };
 
   const toggleAgent = (agent: AgentRole) => {
     setConfig(prev => {
@@ -52,29 +59,44 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
   };
 
   return (
-    <div className="w-[420px] bg-white border-r border-slate-200 h-screen overflow-y-auto flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] fixed left-0 top-0 z-30 font-sans">
+    <div className={`bg-white border-r border-slate-200 h-screen overflow-y-auto flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] fixed left-0 top-0 z-30 font-sans transition-all duration-300 ease-out ${
+      isCollapsed ? 'w-20' : 'w-[420px]'
+    }`}>
       
       {/* Header */}
-      <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-20">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-teal-500 to-teal-700 p-2.5 rounded-xl text-white shadow-lg shadow-teal-500/20">
-             <FlaskConical className="w-5 h-5" />
+      <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-20 min-h-[80px]">
+        {!isCollapsed && (
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-teal-500 to-teal-700 p-2.5 rounded-xl text-white shadow-lg shadow-teal-500/20">
+               <FlaskConical className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-slate-800 leading-none mb-1">BioMed Nexus</h1>
+              <p className="text-[10px] uppercase tracking-wider text-teal-600 font-bold">Research OS v2.0</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-bold text-lg tracking-tight text-slate-800 leading-none mb-1">BioMed Nexus</h1>
-            <p className="text-[10px] uppercase tracking-wider text-teal-600 font-bold">Research OS v2.0</p>
-          </div>
+        )}
+        <div className="flex items-center gap-2 ml-auto">
+          <button 
+              onClick={() => handleCollapse(!isCollapsed)} 
+              className="group p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" 
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+              <ChevronLeft className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+          {!isCollapsed && (
+            <button 
+                onClick={onReset} 
+                className="group p-2 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors" 
+                title="Reset & Back"
+            >
+                <X className="w-4 h-4 transition-transform group-hover:rotate-90" />
+            </button>
+          )}
         </div>
-        <button 
-            onClick={onReset} 
-            className="group p-2 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors" 
-            title="Reset & Back"
-        >
-            <X className="w-4 h-4 transition-transform group-hover:rotate-90" />
-        </button>
       </div>
 
-      <div className="p-6 space-y-8 flex-1">
+      <div className={`p-6 space-y-8 flex-1 overflow-hidden transition-all duration-300 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
         {/* Active Template Indicator */}
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-start gap-3 relative overflow-hidden group">
@@ -226,7 +248,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
 
       </div>
 
-      <div className="p-6 border-t border-slate-100 bg-white sticky bottom-0 z-20">
+      <div className={`p-6 border-t border-slate-100 bg-white sticky bottom-0 z-20 transition-all duration-300 ${isCollapsed ? 'p-3' : ''}`}>
         <button 
           onClick={onGeneratePlan}
           disabled={isGenerating || !config.topic || step === 'results'}
@@ -234,15 +256,20 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             ${isGenerating || !config.topic || step === 'results'
               ? 'bg-slate-200 cursor-not-allowed text-slate-400 shadow-none' 
               : 'shimmer-btn hover:scale-[1.02] hover:shadow-teal-500/25 active:scale-[0.98]'}`}
+          title={isCollapsed ? "Initialize Research Session" : ""}
         >
           {isGenerating ? <Sparkles className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 group-hover:animate-pulse" />}
           
-          <span className="relative z-10">
-              {step === 'results' ? 'Analysis Complete' : isGenerating ? 'Orchestrating Agents...' : 'Initialize Research Session'}
-          </span>
-          
-          {!isGenerating && step !== 'results' && (
-              <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+          {!isCollapsed && (
+            <>
+              <span className="relative z-10">
+                  {step === 'results' ? 'Analysis Complete' : isGenerating ? 'Orchestrating Agents...' : 'Initialize Research Session'}
+              </span>
+              
+              {!isGenerating && step !== 'results' && (
+                  <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              )}
+            </>
           )}
         </button>
       </div>
