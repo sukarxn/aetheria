@@ -3,6 +3,9 @@ import { ResearchTemplate, DataSource, AgentRole, ResearchConfig } from '../type
 import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft, Send, MessageCircle } from 'lucide-react';
 import { chatWithDocument } from '../services/geminiService';
 
+import pdfToText from 'react-pdftotext'
+
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -115,6 +118,18 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       };
     });
   };
+
+// Source - https://stackoverflow.com/a
+// Posted by Pythoner, modified by community. See post 'Timeline' for change history
+// Retrieved 2025-12-06, License - CC BY-SA 4.0
+
+  const extractPDFText = (event) => {
+        const file = event.target.files[0]
+        pdfToText(file)
+            .then(text => console.log(text))
+            .catch(error => console.error("Failed to extract text from pdf"))
+    }
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,8 +289,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
-                accept=".pdf,.txt,.doc,.docx"
-                onChange={handleFileUpload} 
+                accept="application/pdf"
+                onChange={extractPDFText} 
             />
             <button 
                 onClick={() => fileInputRef.current?.click()}
