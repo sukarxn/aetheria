@@ -1,6 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ResearchTemplate, DataSource, AgentRole, ResearchConfig } from '../types';
-import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft } from 'lucide-react';
+import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft, Send, MessageCircle } from 'lucide-react';
+import { chatWithDocument } from '../services/geminiService';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 interface SidebarProps {
   config: ResearchConfig;
@@ -10,15 +18,78 @@ interface SidebarProps {
   isGenerating: boolean;
   step: 'setup' | 'planning' | 'results';
   onCollapsedChange?: (collapsed: boolean) => void;
+  documentContent?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '' }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleCollapse = (collapsed: boolean) => {
     setIsCollapsed(collapsed);
     onCollapsedChange?.(collapsed);
+  };
+
+  // Auto-scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Initialize chat with welcome message
+  useEffect(() => {
+    if (step === 'results' && messages.length === 0) {
+      const welcomeMessage: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: 'Hi! I\'m your research assistant. I can answer questions about the document, provide insights, clarify concepts, or help you explore the findings in more detail. What would you like to know?',
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
+    }
+  }, [step]);
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isLoading) return;
+
+    // Add user message
+    const userMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: inputValue,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+
+    try {
+      // Call geminiService with document context
+      const assistantResponse = await chatWithDocument(inputValue, documentContent);
+
+      const assistantMessage: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: assistantResponse,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      const errorMessage: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your message. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleAgent = (agent: AgentRole) => {
@@ -98,6 +169,61 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
 
       <div className={`p-6 space-y-8 flex-1 overflow-hidden transition-all duration-300 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
+        {step === 'results' ? (
+          // Chat Interface
+          <div className="flex flex-col h-full -mx-6 -my-6">
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-lg p-3 text-sm ${
+                    msg.role === 'user'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-slate-100 text-slate-800'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-100 text-slate-800 rounded-lg p-3">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Chat Input */}
+            <div className="border-t border-slate-100 px-6 py-4 bg-white">
+              <form onSubmit={handleChatSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Ask about the document..."
+                  disabled={isLoading}
+                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputValue.trim()}
+                  className="p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Send message"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          // Original Config Interface
+          <>
         {/* Active Template Indicator */}
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-start gap-3 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-16 h-16 bg-teal-100 rounded-full blur-xl opacity-0 group-hover:opacity-50 transition-opacity"></div>
@@ -245,10 +371,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             ))}
           </div>
         </div>
+          </>
+        )}
 
       </div>
 
-      <div className={`p-6 border-t border-slate-100 bg-white sticky bottom-0 z-20 transition-all duration-300 ${isCollapsed ? 'p-3' : ''}`}>
+      <div className={`p-6 border-t border-slate-100 bg-white sticky bottom-0 z-20 transition-all duration-300 ${isCollapsed ? 'p-3' : ''} ${step === 'results' ? 'hidden' : ''}`}>
         <button 
           onClick={onGeneratePlan}
           disabled={isGenerating || !config.topic || step === 'results'}

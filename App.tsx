@@ -144,6 +144,7 @@ const App = () => {
         isGenerating={loading && step === 'setup'}
         step={step}
         onCollapsedChange={setSidebarCollapsed}
+        documentContent={result?.markdown || ''}
       />
       
       <main className={`flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-[420px]'}`}>

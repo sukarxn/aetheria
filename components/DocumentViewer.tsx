@@ -97,16 +97,130 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     window.print();
   };
 
+  const parseInlineMarkdown = (text: string, baseKey: string) => {
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let key = 0;
+
+    // Match bold, italic, and inline code
+    const regex = /\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`/g;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before match
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      // Add formatted match
+      if (match[1]) {
+        // Bold
+        parts.push(<strong key={`${baseKey}-bold-${key}`} className="font-bold text-slate-900">{match[1]}</strong>);
+      } else if (match[2]) {
+        // Italic
+        parts.push(<em key={`${baseKey}-italic-${key}`} className="italic text-slate-800">{match[2]}</em>);
+      } else if (match[3]) {
+        // Inline code
+        parts.push(<code key={`${baseKey}-code-${key}`} className="bg-slate-100 px-2 py-1 rounded text-teal-700 font-mono text-sm">{match[3]}</code>);
+      }
+      key++;
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   const formatMarkdown = (text: string) => {
-    return (text || '').split('\n').map((line, i) => {
-        if (line.startsWith('# ')) return <h1 key={i} className="text-4xl md:text-5xl font-extrabold text-slate-900 mt-12 mb-8 tracking-tight leading-tight">{line.replace('# ', '')}</h1>;
-        if (line.startsWith('## ')) return <h2 key={i} className="text-2xl md:text-3xl font-bold text-slate-800 mt-10 mb-6 pb-2 border-b border-slate-100 flex items-center gap-3">{line.replace('## ', '')}</h2>;
-        if (line.startsWith('### ')) return <h3 key={i} className="text-xl font-bold text-teal-900 mt-8 mb-4">{line.replace('### ', '')}</h3>;
-        if (line.startsWith('- ')) return <li key={i} className="ml-6 list-disc text-slate-700 mb-2 pl-2 marker:text-teal-500 leading-relaxed">{line.replace('- ', '')}</li>;
-        if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-teal-500 pl-6 italic text-slate-700 my-8 bg-slate-50 py-4 rounded-r-lg shadow-sm">{line.replace('> ', '')}</blockquote>;
-        if (line.trim() === '') return <div key={i} className="h-6"></div>;
-        return <p key={i} className="text-slate-700 leading-8 mb-5 text-[1.1rem] font-light">{line}</p>;
-    });
+    const lines = (text || '').split('\n');
+    const result: JSX.Element[] = [];
+    let inCodeBlock = false;
+    let codeContent = '';
+    let codeLanguage = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Handle code blocks
+      if (line.startsWith('```')) {
+        if (!inCodeBlock) {
+          inCodeBlock = true;
+          codeLanguage = line.replace('```', '').trim();
+          codeContent = '';
+        } else {
+          inCodeBlock = false;
+          result.push(
+            <pre key={`code-${i}`} className="bg-slate-900 text-slate-100 p-6 rounded-xl mb-6 overflow-x-auto font-mono text-sm leading-relaxed border border-slate-700 shadow-lg">
+              <code>{codeContent}</code>
+            </pre>
+          );
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeContent += line + '\n';
+        continue;
+      }
+
+      // Skip empty lines
+      if (line.trim() === '') {
+        result.push(<div key={`space-${i}`} className="h-4"></div>);
+        continue;
+      }
+
+      // Headings
+      if (line.startsWith('# ')) {
+        result.push(
+          <h1 key={`h1-${i}`} className="text-5xl font-black text-slate-900 mt-16 mb-8 tracking-tight leading-tight">
+            {line.replace('# ', '')}
+          </h1>
+        );
+      } else if (line.startsWith('## ')) {
+        result.push(
+          <h2 key={`h2-${i}`} className="text-3xl font-bold text-slate-800 mt-12 mb-6 pb-3 border-b-2 border-teal-500">
+            {line.replace('## ', '')}
+          </h2>
+        );
+      } else if (line.startsWith('### ')) {
+        result.push(
+          <h3 key={`h3-${i}`} className="text-xl font-bold text-teal-700 mt-8 mb-4 flex items-center gap-2">
+            <span className="w-1 h-6 bg-teal-500 rounded-full"></span>
+            {line.replace('### ', '')}
+          </h3>
+        );
+      }
+      // Lists
+      else if (line.startsWith('- ')) {
+        result.push(
+          <li key={`li-${i}`} className="ml-6 list-disc text-slate-700 mb-3 pl-3 marker:text-teal-500 leading-relaxed text-base">
+            {parseInlineMarkdown(line.replace('- ', ''), `li-${i}`)}
+          </li>
+        );
+      }
+      // Blockquotes
+      else if (line.startsWith('> ')) {
+        result.push(
+          <blockquote key={`quote-${i}`} className="border-l-4 border-teal-500 pl-6 italic text-slate-700 my-8 bg-gradient-to-r from-teal-50 to-transparent py-4 rounded-r-lg shadow-sm">
+            {parseInlineMarkdown(line.replace('> ', ''), `quote-${i}`)}
+          </blockquote>
+        );
+      }
+      // Paragraphs with inline formatting
+      else {
+        result.push(
+          <p key={`p-${i}`} className="text-slate-700 leading-8 mb-6 text-base font-light">
+            {parseInlineMarkdown(line, `p-${i}`)}
+          </p>
+        );
+      }
+    }
+
+    return result;
   };
 
   return (

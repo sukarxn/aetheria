@@ -37,6 +37,30 @@ export const generateTaskName = async (description: string, agent: string): Prom
   }
 };
 
+export const chatWithDocument = async (userQuestion: string, documentContent: string): Promise<string> => {
+  const model = "gemini-2.5-flash";
+  
+  const prompt = `You are a helpful research assistant for a pharmaceutical research platform. The user is viewing a document and wants to discuss it with you.
+
+Document Context (first 3000 characters):
+${documentContent.substring(0, 3000)}
+
+User's question: ${userQuestion}
+
+Please provide a helpful, concise response (2-3 sentences max) that relates to the document context. If the question is not related to the document, politely redirect the conversation back to the document.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+    });
+    return response.text || 'I apologize, I encountered an error. Could you please rephrase your question?';
+  } catch (error) {
+    console.error("Error in chat with document:", error);
+    return 'Sorry, I encountered an error processing your message. Please try again.';
+  }
+};
+
 export const generateResearchPlan = async (config: ResearchConfig): Promise<Task[]> => {
   const model = "gemini-2.5-flash"; 
   
