@@ -136,6 +136,8 @@ const App = () => {
 
   // Handle new chat messages
   const handleChatMessage = async (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => {
+    console.log('🔵 handleChatMessage RECEIVED - Message details:', message);
+    
     // Ensure we have a valid timestamp
     const messageTimestamp = message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp);
     
@@ -163,11 +165,14 @@ const App = () => {
       messages: newChatHistory.map(m => ({ role: m.role, contentLength: m.message.length }))
     });
     
+    console.log('App.tsx - New chat history array:', JSON.stringify(newChatHistory, null, 2));
+    
     setChatHistory(newChatHistory);
 
     // Update database if this is a saved/loaded project
     if (selectedProjectId) {
       try {
+        console.log('App.tsx - About to update project with selectedProjectId:', selectedProjectId);
         await updateProject(selectedProjectId, {
           chat_history: newChatHistory
         });
@@ -176,7 +181,7 @@ const App = () => {
         console.error('App.tsx - Failed to update chat history in database:', updateError);
       }
     } else {
-      console.log('App.tsx - No selectedProjectId - chat will be saved when project is created');
+      console.log('App.tsx - No selectedProjectId - chat will be saved when project is created', { selectedProjectId });
     }
   };
 

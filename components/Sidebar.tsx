@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         });
       }
     }
-  }, [step, initialChatHistory]);
+  }, [step]);
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +101,11 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     
     // Call onChatMessage callback for user message - IMPORTANT: send immediately
     if (onChatMessage) {
+      console.log('🟢 Sidebar: Calling onChatMessage for USER message', {
+        role: 'user',
+        content: userMessageContent.substring(0, 50),
+        timestamp: userMessageTimestamp.toISOString()
+      });
       onChatMessage({
         role: 'user',
         content: userMessageContent,
@@ -133,6 +138,11 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       
       // Call onChatMessage callback for assistant response
       if (onChatMessage) {
+        console.log('🔴 Sidebar: Calling onChatMessage for ASSISTANT message', {
+          role: 'assistant',
+          content: assistantResponse.substring(0, 50),
+          timestamp: new Date().toISOString()
+        });
         onChatMessage({
           role: 'assistant',
           content: assistantResponse,

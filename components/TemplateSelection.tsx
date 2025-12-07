@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ResearchTemplate } from '../types';
-import { FileText, Activity, FlaskConical, RefreshCw, BookOpen, ArrowRight, Sparkles, Plus, Trash2 } from 'lucide-react';
+import { FileText, Activity, FlaskConical, RefreshCw, BookOpen, ArrowRight, Sparkles, Plus, Trash2, LogOut, User } from 'lucide-react';
 import { getUserProjects, deleteProject } from '../utils/projectService';
 
 interface TemplateSelectionProps {
@@ -55,6 +55,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({ onSelect, userId,
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showProjects, setShowProjects] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -95,174 +96,187 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({ onSelect, userId,
     }
   };
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px]"></div>
-          <div className="absolute -top-20 -right-20 w-96 h-96 bg-teal-100 rounded-full blur-3xl opacity-30"></div>
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-30"></div>
-      </div>
-
-      <div className="max-w-6xl w-full z-10">
-        {showProjects && (
-          <>
-            {/* Projects Section */}
-            <div className="text-center mb-16 animate-fade-up">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-medium text-slate-500 mb-4 animate-fade-in delay-100">
-                <Sparkles className="w-3 h-3 text-teal-500" />
-                Your Research Projects
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Header */}
+      <div className="border-b border-slate-200 bg-slate-50 px-8 py-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-800 mb-1">
+              {showProjects ? 'Research Projects' : 'New Research Session'}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {showProjects ? 'Manage and access your saved projects' : 'Select a research workflow to get started'}
+            </p>
+          </div>
+          
+          {/* User Profile */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center gap-3 px-4 py-2 rounded-md border border-slate-200 hover:bg-white 
+                         transition-colors duration-200"
+            >
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-semibold">
+                SG
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4 tracking-tight leading-tight">
-                Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Saved Projects</span>
-              </h1>
-              <p className="text-slate-500 text-lg max-w-2xl mx-auto">Access your previous research or create a new one.</p>
-            </div>
-
-            {error && (
-              <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                {error}
+              <div className="text-left hidden sm:block">
+                <p className="text-sm font-semibold text-slate-900">Sukaran Gulati</p>
+                <p className="text-xs text-slate-500">Administrator</p>
+              </div>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-50">
+                <div className="px-4 py-3 border-b border-slate-200">
+                  <p className="text-sm font-semibold text-slate-900">Sukaran Gulati</p>
+                  <p className="text-xs text-slate-500">Administrator</p>
+                </div>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 
+                             transition-colors duration-150 flex items-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  Profile
+                </button>
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 
+                             transition-colors duration-150 flex items-center gap-2 border-t border-slate-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
 
-            {/* Create New Project Button */}
-            <div className="mb-12">
-              <button
-                onClick={onCreateNew}
-                className="group w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 
-                           text-white p-6 rounded-2xl shadow-[0_2px_10px_rgba(13,148,136,0.2)] border border-teal-400
-                           hover:shadow-[0_12px_24px_rgba(13,148,136,0.3)] transition-all duration-300
-                           flex items-center justify-center gap-3 font-semibold text-lg"
-              >
-                <Plus className="w-6 h-6" />
-                Create New Project
-              </button>
-            </div>
-
-            {/* Projects List */}
-            {loading ? (
-              <div className="text-center text-slate-500">Loading projects...</div>
-            ) : projects.length === 0 ? (
-              <div className="text-center text-slate-500 py-12">
-                <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                <p className="text-lg">No projects yet. Create one to get started!</p>
+      {/* Main Content */}
+      <div className="flex-1 px-8 py-8">
+        <div className="max-w-7xl mx-auto">
+          {showProjects ? (
+            <>
+              {/* Create New Project Button */}
+              <div className="mb-8">
+                <button
+                  onClick={onCreateNew}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-sm font-medium 
+                             transition-colors duration-200 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Project
+                </button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {projects.map((project, idx) => (
-                  <button
-                    key={project.id}
-                    onClick={() => handleSelectProject(project.id)}
-                    style={{ animationDelay: `${idx * 50}ms` }}
-                    className="group w-full text-left bg-white p-6 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-slate-200 
-                               hover:border-teal-400 hover:shadow-[0_12px_24px_rgba(13,148,136,0.1)] hover:-translate-y-1
-                               transition-all duration-300 ease-out relative overflow-hidden animate-fade-up"
-                  >
-                    {/* Decorative icon background */}
-                    <div className="absolute -top-6 -right-6 p-4 opacity-0 group-hover:opacity-5 transition-opacity duration-500">
-                      <FileText className="w-32 h-32 text-teal-600" />
-                    </div>
 
-                    <div className="flex items-center justify-between relative z-10">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="bg-slate-50 w-12 h-12 rounded-xl flex items-center justify-center text-slate-400 
-                                        group-hover:bg-gradient-to-br group-hover:from-teal-500 group-hover:to-teal-600 group-hover:text-white 
-                                        group-hover:shadow-lg group-hover:shadow-teal-500/30 transition-all duration-300">
-                            <FileText className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-slate-800 group-hover:text-teal-700 transition-colors">
-                              {project.title}
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                              Created: {new Date(project.created_at).toLocaleDateString()} at {new Date(project.created_at).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-slate-600 ml-15">
-                          Last updated: {new Date(project.updated_at).toLocaleDateString()}
-                        </p>
-                      </div>
+              {error && (
+                <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
 
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-sm font-bold text-teal-600 opacity-0 transform translate-y-4
-                                      group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                          Open <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                        </div>
-                        <button
-                          onClick={(e) => handleDelete(e, project.id)}
-                          className="p-2 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 
-                                    transition-all duration-300"
+              {/* Projects Table */}
+              {loading ? (
+                <div className="text-center text-slate-500 py-12">Loading projects...</div>
+              ) : projects.length === 0 ? (
+                <div className="text-center text-slate-500 py-12 border border-slate-200 rounded-md bg-slate-50">
+                  <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p className="text-sm">No projects yet. Create one to get started!</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-md overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Project Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Last Updated
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {projects.map((project) => (
+                        <tr
+                          key={project.id}
+                          onClick={() => handleSelectProject(project.id)}
+                          className="hover:bg-slate-50 cursor-pointer transition-colors duration-150"
                         >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-slate-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">{project.title}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm text-slate-600">
+                              {new Date(project.created_at).toLocaleDateString()}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm text-slate-600">
+                              {new Date(project.updated_at).toLocaleDateString()}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={(e) => handleDelete(e, project.id)}
+                              className="p-1.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 
+                                       transition-colors duration-150"
+                              title="Delete project"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Templates Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => onSelect(t.id)}
+                    className="text-left p-6 border border-slate-200 rounded-md hover:border-slate-300 
+                               hover:bg-slate-50 transition-all duration-200 flex flex-col h-48"
+                  >
+                    <div className="mb-4 w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-600">
+                      <t.icon className="w-5 h-5" />
                     </div>
-
-                    {/* Bottom active line */}
-                    <div className="absolute bottom-0 left-0 h-1 bg-teal-500 w-0 group-hover:w-full transition-all duration-500 ease-out"></div>
+                    
+                    <h3 className="text-sm font-semibold text-slate-900 mb-2">
+                      {t.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-auto">
+                      {t.description}
+                    </p>
+                    
+                    <div className="mt-4 text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                      Select <ArrowRight className="w-3 h-3" />
+                    </div>
                   </button>
                 ))}
               </div>
-            )}
-          </>
-        )}
-
-        {!showProjects && (
-          <>
-            {/* Templates Section */}
-            <div className="text-center mb-16 animate-fade-up">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-medium text-slate-500 mb-4 animate-fade-in delay-100">
-                <Sparkles className="w-3 h-3 text-teal-500" />
-                AI-Powered Research Assistant
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4 tracking-tight leading-tight">
-                What would you like to <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">research</span> today?
-              </h1>
-              <p className="text-slate-500 text-lg max-w-2xl mx-auto">Select a specialized workflow to launch your multi-agent research session.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((t, idx) => (
-                <button
-                  key={t.id}
-                  onClick={() => onSelect(t.id)}
-                  style={{ animationDelay: `${idx * 100}ms` }}
-                  className="group text-left bg-white p-8 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-slate-200 
-                             hover:border-teal-400 hover:shadow-[0_12px_24px_rgba(13,148,136,0.1)] hover:-translate-y-1
-                             transition-all duration-300 ease-out flex flex-col h-64 relative overflow-hidden animate-fade-up"
-                >
-                  {/* Decorative huge icon */}
-                  <div className="absolute -top-6 -right-6 p-4 opacity-0 group-hover:opacity-5 transition-opacity duration-500 transform group-hover:rotate-12">
-                    <t.icon className="w-32 h-32 text-teal-600" />
-                  </div>
-                  
-                  <div className="mb-6 bg-slate-50 w-14 h-14 rounded-2xl flex items-center justify-center text-slate-400 
-                                  group-hover:bg-gradient-to-br group-hover:from-teal-500 group-hover:to-teal-600 group-hover:text-white 
-                                  group-hover:shadow-lg group-hover:shadow-teal-500/30
-                                  transition-all duration-300">
-                    <t.icon className="w-7 h-7" />
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-teal-700 transition-colors">
-                    {t.title}
-                  </h3>
-                  <p className="text-slate-500 text-sm leading-relaxed mb-auto group-hover:text-slate-600">
-                    {t.description}
-                  </p>
-                  
-                  <div className="mt-4 flex items-center gap-2 text-sm font-bold text-teal-600 opacity-0 transform translate-y-4
-                                  group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                    Start Project <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </div>
-                  
-                  {/* Bottom active line */}
-                  <div className="absolute bottom-0 left-0 h-1 bg-teal-500 w-0 group-hover:w-full transition-all duration-500 ease-out"></div>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

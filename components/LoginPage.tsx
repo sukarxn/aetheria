@@ -41,126 +41,165 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <div className="min-h-screen bg-white flex">
+      {/* Left Side - Medical Collage Background */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 relative overflow-hidden items-center justify-center p-8">
+        {/* Medical Collage Grid */}
+        <div className="relative w-full h-full max-w-md">
+          {/* Top Left - DNA/Molecular */}
+          <div className="absolute top-0 left-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            🧬
+          </div>
+          
+          {/* Top Right - Microscope/Lab */}
+          <div className="absolute top-8 right-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            🔬
+          </div>
+          
+          {/* Center Left - Heart/Health */}
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            ❤️
+          </div>
+          
+          {/* Center - Medical Chart */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-5xl opacity-90 hover:opacity-100 transition-opacity">
+            📊
+          </div>
+          
+          {/* Center Right - Pills/Pharmacy */}
+          <div className="absolute top-1/2 right-0 -translate-y-1/2 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            💊
+          </div>
+          
+          {/* Bottom Left - Research/Book */}
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            📚
+          </div>
+          
+          {/* Bottom Right - Stethoscope */}
+          <div className="absolute bottom-8 right-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+            🩺
+          </div>
+        </div>
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/50 to-transparent"></div>
+        
+        {/* Bottom text */}
+        <div className="absolute bottom-8 left-8 z-10">
+          <h2 className="text-2xl font-bold text-white mb-2">Biomed Nexus AI</h2>
+          <p className="text-slate-300 text-sm">Advanced Research Intelligence Platform</p>
+        </div>
       </div>
 
-      {/* Login Card */}
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-8">
-          
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg">
-                <ShieldAlert className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Biomed Nexus AI</h1>
-            <p className="text-slate-300 text-sm">Research Intelligence Platform</p>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md">
+          {/* Mobile Header */}
+          <div className="lg:hidden text-center mb-8">
+            <h1 className="text-3xl font-bold text-slate-900">Biomed Nexus AI</h1>
+            <p className="text-slate-600 text-sm mt-1">Research Intelligence Platform</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-200 mb-3">Select Your Role</label>
-              <div className="grid grid-cols-2 gap-3">
-                {roles.map(role => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => setSelectedRole(role.id)}
-                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                      selectedRole === role.id
-                        ? 'border-teal-400 bg-teal-400/20 shadow-lg shadow-teal-400/30'
-                        : 'border-slate-400/30 bg-slate-400/10 hover:border-slate-400/50'
-                    }`}
-                  >
-                    <div className="text-left">
-                      <div className="text-sm font-semibold text-white">{role.label}</div>
-                      <div className="text-xs text-slate-400">{role.description}</div>
-                    </div>
-                  </button>
-                ))}
+          {/* Form Container */}
+          <div className="bg-white">
+            <form onSubmit={handleLogin} className="space-y-6">
+              
+              {/* Role Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-900 mb-3">Select Your Role</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {roles.map(role => (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setSelectedRole(role.id)}
+                      className={`p-3 rounded-md border transition-all duration-200 text-left ${
+                        selectedRole === role.id
+                          ? 'border-slate-900 bg-slate-50'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-slate-900">{role.label}</div>
+                      <div className="text-xs text-slate-500">{role.description}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Username */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-slate-200 mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-400/10 border border-slate-400/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-teal-400 focus:bg-slate-400/20 transition-all duration-200"
-                  disabled={isLoading}
-                />
+              {/* Username */}
+              <div>
+                <label htmlFor="username" className="block text-sm font-semibold text-slate-900 mb-2">
+                  Username
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-md text-slate-900 placeholder-slate-500 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-slate-200 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-400/10 border border-slate-400/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-teal-400 focus:bg-slate-400/20 transition-all duration-200"
-                  disabled={isLoading}
-                />
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-slate-900 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-md text-slate-900 placeholder-slate-500 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all duration-200"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-red-500/20 border border-red-400/50 rounded-lg">
-                <p className="text-red-300 text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-teal-500/30 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Logging in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  Login
-                </>
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
               )}
-            </button>
-          </form>
 
-          {/* Demo Credentials Hint */}
-          <div className="mt-6 p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
-            <p className="text-xs text-blue-300">
-              <span className="font-semibold">Demo Credentials:</span><br/>
-              Username: <code className="bg-slate-900/50 px-1 rounded">user001</code><br/>
-              Password: <code className="bg-slate-900/50 px-1 rounded">123456789</code>
-            </p>
+              {/* Login Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    Login
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Demo Credentials Hint */}
+            <div className="mt-6 p-3 bg-slate-50 border border-slate-200 rounded-md">
+              <p className="text-xs text-slate-700">
+                <span className="font-semibold">Demo Credentials:</span><br/>
+                Username: <code className="bg-white px-1 rounded text-slate-900">user001</code><br/>
+                Password: <code className="bg-white px-1 rounded text-slate-900">123456789</code>
+              </p>
+            </div>
           </div>
         </div>
       </div>
