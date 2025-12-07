@@ -240,54 +240,8 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     <div className="h-full flex flex-col relative bg-[#f8fafc]">
       
       {/* Floating Toolbar with Glassmorphism */}
-      <div className="h-20 px-8 flex items-center justify-between sticky top-0 z-20 glass border-b border-white/50 shadow-sm transition-all duration-300">
+      <div className="h-20 px-8 flex items-center justify-end sticky top-0 z-20 glass border-b border-white/50 shadow-sm transition-all duration-300">
         
-        {/* Left Section: Ask More Questions */}
-        <div className="flex items-center gap-4 flex-1 max-w-2xl">
-          <div className="relative flex-1 group">
-            <input 
-              type="text" 
-              placeholder="Ask more questions to dive deeper..."
-              className="w-full pl-11 pr-24 py-3 bg-white/80 border border-slate-200 rounded-full text-sm focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 outline-none transition-all shadow-sm group-hover:shadow-md group-hover:bg-white"
-              value={refineInput}
-              onChange={(e) => setRefineInput(e.target.value)}
-              onFocus={handleInputFocus}
-              onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
-            />
-            <Sparkles className="w-4 h-4 text-teal-600 absolute left-4 top-3.5 animate-pulse" />
-            
-            <button 
-                onClick={handleRefine}
-                disabled={isRefining || !refineInput}
-                className="absolute right-2 top-2 px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-full hover:bg-teal-600 disabled:opacity-0 disabled:transform disabled:translate-x-4 transition-all duration-300 shadow-md"
-            >
-                {isRefining ? 'Thinking...' : 'Ask'}
-            </button>
-
-            {/* Suggested Questions Dropdown */}
-            {showSuggestedQuestions && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 space-y-2 max-h-96 overflow-y-auto animate-fade-up">
-                <div className="flex items-center justify-between px-3 py-2">
-                  <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Suggested Questions</p>
-                  {isGeneratingQuestions && <div className="w-4 h-4 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin"></div>}
-                </div>
-                {suggestedQuestions.map((question, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleQuestionClick(question)}
-                    className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-teal-50 border border-transparent hover:border-teal-200 transition-all text-sm text-slate-700 hover:text-teal-700 font-medium leading-relaxed hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="text-teal-500 font-bold mt-0.5">✓</span>
-                      <span>{question}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Actions */}
         <div className="flex items-center gap-2">
           {onBackToProjects && (
