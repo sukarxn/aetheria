@@ -6,11 +6,14 @@ import TemplateSelection from './components/TemplateSelection';
 import LoginPage from './components/LoginPage';
 import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult } from './types';
 import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection } from './services/geminiService';
+import { getProject, saveProject, updateProject } from './utils/projectService';
+import { SupabaseTest } from './components/SupabaseTest';
 
 const App = () => {
   // Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+  const [userId] = useState('550e8400-e29b-41d4-a716-446655440000'); // Hardcoded user ID
 
   // Config State
   const [config, setConfig] = useState<ResearchConfig>({
@@ -34,6 +37,8 @@ const App = () => {
   const [step, setStep] = useState<'setup' | 'planning' | 'results'>('setup');
   const [loading, setLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
   
   // Data State
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -53,7 +58,70 @@ const App = () => {
       ]
     }));
     setHasSelectedTemplate(true);
+    setSelectedProjectId(null);
     setStep('setup');
+  };
+
+  const handleSelectProject = async (projectId: string) => {
+    try {
+      const project = await getProject(projectId);
+      if (project) {
+        setSelectedProjectId(projectId);
+        setConfig(prev => ({
+          ...prev,
+          topic: project.title || '',
+          template: ResearchTemplate.ORIGINAL_RESEARCH
+        }));
+        
+        // Extract markdown content properly
+        let markdownContent = '';
+        if (project.generated_document) {
+          if (typeof project.generated_document === 'string') {
+            markdownContent = project.generated_document;
+          } else if (project.generated_document.markdown) {
+            markdownContent = project.generated_document.markdown;
+          } else if (project.generated_document.content) {
+            markdownContent = project.generated_document.content;
+          }
+        }
+        
+        setResult({
+          markdown: markdownContent,
+          graph: project.knowledge_graph || {},
+          review: {}
+        });
+        setChatHistory(project.chat_history || []);
+        setHasSelectedTemplate(true);
+        setStep('results');
+      }
+    } catch (error) {
+      console.error('Failed to load project:', error);
+      alert('Failed to load project');
+    }
+  };
+
+  const handleCreateNew = () => {
+    setSelectedProjectId(null);
+    setResult(null);
+    setChatHistory([]);
+    setHasSelectedTemplate(true);
+    setStep('setup');
+  };
+
+  const handleSaveProject = async (title: string) => {
+    if (!result) return;
+    try {
+      await saveProject(userId, {
+        title,
+        generatedDocument: result,
+        chatHistory,
+        knowledgeGraph: result.graph,
+      });
+      alert('Project saved successfully!');
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      alert('Failed to save project');
+    }
   };
 
   const handleReset = () => {
@@ -61,7 +129,63 @@ const App = () => {
     setStep('setup');
     setTasks([]);
     setResult(null);
+    setSelectedProjectId(null);
+    setChatHistory([]);
     setConfig(prev => ({ ...prev, topic: '', customData: '' }));
+  };
+
+  // Handle new chat messages
+  const handleChatMessage = async (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => {
+    // Ensure we have a valid timestamp
+    const messageTimestamp = message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp);
+    
+    console.log('App.tsx - handleChatMessage received:', {
+      role: message.role,
+      contentLength: message.content.length,
+      content: message.content.substring(0, 50) + '...',
+      timestamp: messageTimestamp.toISOString()
+    });
+    
+    // Add to local chat history
+    const newMessage = {
+      role: message.role,
+      message: message.content,
+      timestamp: messageTimestamp.toISOString()
+    };
+    
+    const newChatHistory = [
+      ...chatHistory,
+      newMessage
+    ];
+    
+    console.log('App.tsx - Updated chat history:', {
+      totalMessages: newChatHistory.length,
+      messages: newChatHistory.map(m => ({ role: m.role, contentLength: m.message.length }))
+    });
+    
+    setChatHistory(newChatHistory);
+
+    // Update database if this is a saved/loaded project
+    if (selectedProjectId) {
+      try {
+        await updateProject(selectedProjectId, {
+          chat_history: newChatHistory
+        });
+        console.log('App.tsx - Chat history updated in database - Total messages:', newChatHistory.length);
+      } catch (updateError) {
+        console.error('App.tsx - Failed to update chat history in database:', updateError);
+      }
+    } else {
+      console.log('App.tsx - No selectedProjectId - chat will be saved when project is created');
+    }
+  };
+
+  const handleBackToProjects = () => {
+    setHasSelectedTemplate(false);
+    setSelectedProjectId(null);
+    setResult(null);
+    setChatHistory([]);
+    setStep('setup');
   };
 
   // 2. Generate Plan
@@ -94,13 +218,37 @@ const App = () => {
         reviewContent(draftMarkdown)
       ]);
 
-      setResult({
+      const newResult = {
         markdown: draftMarkdown,
         graph: graphData,
         review: reviewData
-      });
+      };
 
+      setResult(newResult);
       setStep('results');
+
+      // 3. Automatically save project to Supabase
+      try {
+        await saveProject(userId, {
+          title: config.topic || 'Untitled Research Project',
+          generatedDocument: {
+            markdown: draftMarkdown,
+            content: draftMarkdown,
+            review: reviewData
+          },
+          chatHistory: chatHistory.length > 0 ? chatHistory : [{ role: 'system', message: 'Project created' }],
+          knowledgeGraph: graphData,
+        });
+        console.log('Project automatically saved to database', {
+          title: config.topic,
+          markdownLength: draftMarkdown.length,
+          graphData: graphData,
+          reviewData: reviewData
+        });
+      } catch (saveError) {
+        console.error('Failed to auto-save project:', saveError);
+        // Don't alert - this is a background operation
+      }
     } catch (e) {
       console.error(e);
       alert("Error executing research.");
@@ -117,6 +265,31 @@ const App = () => {
           // Re-reviewing is optional but good practice to see score changes
           const newReview = await reviewContent(newMarkdown); 
           setResult(prev => prev ? ({ ...prev, markdown: newMarkdown, review: newReview }) : null);
+          
+          // Update chat history with the refinement
+          const updatedChatHistory = [
+            ...chatHistory,
+            { role: 'user', message: instruction },
+            { role: 'assistant', message: 'Refinement completed' }
+          ];
+          setChatHistory(updatedChatHistory);
+          
+          // Update the document and chat history in the database if this is a saved project
+          if (selectedProjectId) {
+            try {
+              await updateProject(selectedProjectId, {
+                generated_document: {
+                  markdown: newMarkdown,
+                  content: newMarkdown,
+                  review: newReview
+                },
+                chat_history: updatedChatHistory
+              });
+              console.log('Refined document and chat history updated in database');
+            } catch (updateError) {
+              console.error('Failed to update refined document in database:', updateError);
+            }
+          }
       } catch (e) {
           console.error(e);
       }
@@ -128,6 +301,18 @@ const App = () => {
     try {
       const newGraphData = await generateKnowledgeGraph(result.markdown);
       setResult(prev => prev ? ({ ...prev, graph: newGraphData }) : null);
+      
+      // Update the graph in the database if this is a saved project
+      if (selectedProjectId) {
+        try {
+          await updateProject(selectedProjectId, {
+            knowledge_graph: newGraphData
+          });
+          console.log('Knowledge graph updated in database');
+        } catch (updateError) {
+          console.error('Failed to update graph in database:', updateError);
+        }
+      }
     } catch (e) {
       console.error(e);
       alert("Error regenerating knowledge graph. Please try again.");
@@ -143,12 +328,20 @@ const App = () => {
   }
 
   if (!hasSelectedTemplate) {
-    return <TemplateSelection onSelect={handleTemplateSelect} />;
+    return (
+      <TemplateSelection 
+        onSelect={handleTemplateSelect}
+        userId={userId}
+        onSelectProject={handleSelectProject}
+        onCreateNew={handleCreateNew}
+      />
+    );
   }
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Sidebar 
+      
+       <Sidebar 
         config={config} 
         setConfig={setConfig} 
         onGeneratePlan={handleGeneratePlan}
@@ -157,11 +350,13 @@ const App = () => {
         step={step}
         onCollapsedChange={setSidebarCollapsed}
         documentContent={result?.markdown || ''}
+        onChatMessage={handleChatMessage}
+        initialChatHistory={chatHistory}
       />
       
       <main className={`flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-[420px]'}`}>
         
-        {step === 'setup' && (
+        {step === 'setup' && !selectedProjectId && (
              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-12 animate-fade-in">
                  <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center mb-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] animate-float">
                     <span className="text-7xl grayscale opacity-30 select-none">🧬</span>
@@ -191,12 +386,15 @@ const App = () => {
                     graphData={result.graph}
                     onRefine={handleRefine}
                     onRegenerateGraph={handleRegenerateGraph}
+                    onBackToProjects={selectedProjectId ? handleBackToProjects : undefined}
                 />
             </div>
         )}
 
       </main>
+      
     </div>
+
   );
 };
 

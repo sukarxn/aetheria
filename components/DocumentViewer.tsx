@@ -9,9 +9,11 @@ interface DocumentViewerProps {
   graphData: GraphData | null;
   onRefine: (instruction: string) => Promise<void>;
   onRegenerateGraph?: () => Promise<void>;
+  onBackToProjects?: () => void;
+  onChatUpdate?: (message: { role: string; message: string }) => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate }) => {
   const [refineInput, setRefineInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
@@ -135,8 +137,19 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     return parts.length > 0 ? parts : text;
   };
 
-  const formatMarkdown = (text: string) => {
-    const lines = (text || '').split('\n');
+  const formatMarkdown = (text: string | any) => {
+    // Handle case where text is an object instead of string
+    let contentText = text;
+    if (typeof text === 'object' && text !== null) {
+      contentText = text.content || text.markdown || JSON.stringify(text);
+    }
+    
+    // Ensure we have a string
+    if (typeof contentText !== 'string') {
+      contentText = String(contentText || '');
+    }
+
+    const lines = (contentText || '').split('\n');
     const result: JSX.Element[] = [];
     let inCodeBlock = false;
     let codeContent = '';
@@ -229,7 +242,7 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
       {/* Floating Toolbar with Glassmorphism */}
       <div className="h-20 px-8 flex items-center justify-between sticky top-0 z-20 glass border-b border-white/50 shadow-sm transition-all duration-300">
         
-        {/* Ask More Questions */}
+        {/* Left Section: Ask More Questions */}
         <div className="flex items-center gap-4 flex-1 max-w-2xl">
           <div className="relative flex-1 group">
             <input 
@@ -277,6 +290,16 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {onBackToProjects && (
+            <button 
+              onClick={onBackToProjects}
+              className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-teal-700 hover:bg-white rounded-full transition-all text-xs font-bold border border-transparent hover:border-slate-200 hover:shadow-sm"
+            >
+              <X className="w-4 h-4" />
+              Back to Projects
+            </button>
+          )}
+          
           <button 
             onClick={() => setShowGraph(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-teal-700 hover:bg-white rounded-full transition-all text-xs font-bold border border-transparent hover:border-slate-200 hover:shadow-sm"

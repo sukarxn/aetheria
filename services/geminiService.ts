@@ -38,7 +38,7 @@ export const generateTaskName = async (description: string, agent: string): Prom
 };
 
 export const chatWithDocument = async (userQuestion: string, documentContent: string): Promise<string> => {
-  const model = "gemini-2.5-flash";
+  const model = "gemini-2.5-flash-lite";
   
   const prompt = `You are a helpful research assistant for a pharmaceutical research platform. The user is viewing a document and wants to discuss it with you.
 
@@ -62,7 +62,7 @@ Please provide a helpful, concise response (2-3 sentences max) that relates to t
 };
 
 export const generateResearchPlan = async (config: ResearchConfig): Promise<Task[]> => {
-  const model = "gemini-2.5-flash"; 
+  const model = "gemini-2.5-flash-lite"; 
   
   const prompt = `
     You are a Lead Strategy Coordinator for a Pharmaceutical Market Intelligence Platform.
@@ -133,7 +133,7 @@ export const generateResearchPlan = async (config: ResearchConfig): Promise<Task
 
 export const executeResearchDraft = async (config: ResearchConfig, tasks: Task[]): Promise<string> => {
   // Using Pro for complex reasoning and writing quality
-  const model = "gemini-2.5-flash";
+  const model = "gemini-2.5-flash-lite";
 
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const taskList = safeTasks.map(t => `- [${t.agent}] ${t.description}`).join('\n');
@@ -248,7 +248,7 @@ export const generateKnowledgeGraph = async (text: string): Promise<GraphData> =
 };
 
 export const reviewContent = async (text: string): Promise<ReviewMetrics> => {
-  const model = "gemini-2.5-flash";
+  const model = "gemini-2.5-flash-lite";
 
   const prompt = `
     Act as a Senior Pharmaceutical Consultant. Review the following report for strategic insight and accuracy.

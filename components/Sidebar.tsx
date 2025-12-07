@@ -22,9 +22,11 @@ interface SidebarProps {
   step: 'setup' | 'planning' | 'results';
   onCollapsedChange?: (collapsed: boolean) => void;
   documentContent?: string;
+  onChatMessage?: (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => void;
+  initialChatHistory?: any[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '' }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '', onChatMessage, initialChatHistory = [] }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,37 +44,78 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize chat with welcome message
+  // Initialize chat with welcome message or restore from history
   useEffect(() => {
-    if (step === 'results' && messages.length === 0) {
-      const welcomeMessage: Message = {
-        id: `msg-${Date.now()}`,
-        role: 'assistant',
-        content: 'Hi! I\'m your research assistant. I can answer questions about the document, provide insights, clarify concepts, or help you explore the findings in more detail. What would you like to know?',
-        timestamp: new Date()
-      };
-      setMessages([welcomeMessage]);
+    if (step === 'results') {
+      // If we have initial chat history, restore it
+      if (initialChatHistory.length > 0) {
+        const restoredMessages: Message[] = initialChatHistory.map((msg, idx) => ({
+          id: `msg-${idx}`,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.message || msg.content,
+          timestamp: new Date(msg.timestamp || new Date())
+        }));
+        setMessages(restoredMessages);
+        console.log('Chat history restored from database:', restoredMessages.length, 'messages');
+      } else if (messages.length === 0) {
+        // Otherwise, add welcome message
+        const welcomeMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: 'Hi! I\'m your research assistant. I can answer questions about the document, provide insights, clarify concepts, or help you explore the findings in more detail. What would you like to know?',
+          timestamp: new Date()
+        };
+        setMessages([welcomeMessage]);
+        
+        // Notify parent about welcome message
+        onChatMessage?.({
+          role: 'assistant',
+          content: welcomeMessage.content,
+          timestamp: welcomeMessage.timestamp
+        });
+      }
     }
-  }, [step]);
+  }, [step, initialChatHistory]);
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
+    const userMessageContent = inputValue;
+    const userMessageTimestamp = new Date();
+
     // Add user message
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: inputValue,
-      timestamp: new Date()
+      content: userMessageContent,
+      timestamp: userMessageTimestamp
     };
     setMessages(prev => [...prev, userMessage]);
+    
+    console.log('Sidebar: User message being sent to parent callback', {
+      role: 'user',
+      content: userMessageContent.substring(0, 50),
+      timestamp: userMessageTimestamp.toISOString()
+    });
+    
+    // Call onChatMessage callback for user message - IMPORTANT: send immediately
+    if (onChatMessage) {
+      onChatMessage({
+        role: 'user',
+        content: userMessageContent,
+        timestamp: userMessageTimestamp
+      });
+    } else {
+      console.warn('Sidebar: onChatMessage callback not provided!');
+    }
+    
     setInputValue('');
     setIsLoading(true);
 
     try {
       // Call geminiService with document context
-      const assistantResponse = await chatWithDocument(inputValue, documentContent);
+      const assistantResponse = await chatWithDocument(userMessageContent, documentContent);
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}`,
@@ -81,6 +124,21 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         timestamp: new Date()
       };
       setMessages(prev => [...prev, assistantMessage]);
+      
+      console.log('Sidebar: Assistant message being sent to parent callback', {
+        role: 'assistant',
+        content: assistantResponse.substring(0, 50),
+        timestamp: new Date().toISOString()
+      });
+      
+      // Call onChatMessage callback for assistant response
+      if (onChatMessage) {
+        onChatMessage({
+          role: 'assistant',
+          content: assistantResponse,
+          timestamp: new Date()
+        });
+      }
     } catch (error) {
       console.error('Error calling chat API:', error);
       const errorMessage: Message = {
@@ -90,6 +148,15 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
+      
+      // Call onChatMessage callback for error message
+      if (onChatMessage) {
+        onChatMessage({
+          role: 'assistant',
+          content: 'Sorry, I encountered an error processing your message. Please try again.',
+          timestamp: new Date()
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -271,7 +338,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
           <div className="flex items-center justify-between text-slate-800 font-bold text-sm">
             <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-teal-600" />
-                <h3>Internal Data</h3>
+                <h3>Upload Internal Data Sources</h3>
             </div>
             <span className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">Optional</span>
           </div>
