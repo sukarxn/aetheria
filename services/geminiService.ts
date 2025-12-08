@@ -87,6 +87,71 @@ Return ONLY the list of entities, one per line, no numbering or additional text.
   }
 };
 
+export const extractChartData = async (documentContent: string): Promise<any[]> => {
+  const model = "gemini-2.5-flash";
+  
+  const prompt = `Analyze the pharmaceutical research document and extract data suitable for creating charts and visualizations.
+
+Document Content (first 5000 characters):
+${documentContent.substring(0, 5000)}
+
+Extract numerical data that could be visualized as:
+- Bar charts (comparisons, rankings)
+- Line charts (trends over time)
+- Pie charts (market share, percentages)
+- Table data (structured comparisons)
+
+For each chart, provide:
+1. chartType: "bar" | "line" | "pie" | "table"
+2. title: descriptive title
+3. description: what the chart shows
+4. data: array of data points with labels and values
+5. labels: axis labels or legend labels
+
+Return as JSON array of chart objects. Minimum 2-3 charts.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              chartType: { type: Type.STRING },
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              data: { 
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    label: { type: Type.STRING },
+                    value: { type: Type.NUMBER }
+                  }
+                }
+              },
+              labels: { 
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const raw = JSON.parse(response.text || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (error) {
+    console.error("Error extracting chart data:", error);
+    return [];
+  }
+};
+
 export const generateResearchPlan = async (config: ResearchConfig): Promise<Task[]> => {
   const model = "gemini-2.5-flash-lite"; 
   

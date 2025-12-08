@@ -3,6 +3,8 @@ import { ReviewMetrics, GraphData } from '../types';
 import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare, Bell, AlertCircle } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
 import { ResearchTimeline } from './ResearchTimeline';
+import ChartsViewer from './ChartsViewer';
+import { extractChartData } from '../services/geminiService';
 
 interface DocumentViewerProps {
   content: string;
@@ -35,6 +37,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graph
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showCharts, setShowCharts] = useState(false);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [isLoadingCharts, setIsLoadingCharts] = useState(false);
   const selectionMenuRef = useRef<HTMLDivElement>(null);
 
   // Sample alerts data
@@ -152,6 +157,20 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     navigator.clipboard.writeText(selectedText);
     setShowSelectionMenu(false);
     alert('Text copied to clipboard!');
+  };
+
+  const handleGenerateCharts = async () => {
+    setIsLoadingCharts(true);
+    try {
+      const charts = await extractChartData(content);
+      setChartData(charts);
+      setShowCharts(true);
+    } catch (error) {
+      console.error('Error generating charts:', error);
+      alert('Failed to generate charts. Please try again.');
+    } finally {
+      setIsLoadingCharts(false);
+    }
   };
 
   const handleInputFocus = async () => {
@@ -462,6 +481,19 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           </button>
 
           <button 
+            onClick={handleGenerateCharts}
+            disabled={isLoadingCharts}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-amber-700 hover:bg-white rounded-full transition-all text-xs font-bold border border-transparent hover:border-slate-200 hover:shadow-sm disabled:opacity-50"
+          >
+            {isLoadingCharts ? (
+              <RotateCcw className="w-4 h-4 animate-spin" />
+            ) : (
+              <BarChart2 className="w-4 h-4" />
+            )}
+            {isLoadingCharts ? 'Generating...' : 'Generate Charts'}
+          </button>
+
+          <button 
             onClick={() => setShowTimeline(!showTimeline)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all text-xs font-bold border ${showTimeline ? 'bg-purple-50 text-purple-700 border-purple-100 shadow-inner' : 'text-slate-600 border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
           >
@@ -711,6 +743,14 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Charts Viewer Modal */}
+      {showCharts && (
+        <ChartsViewer 
+          charts={chartData}
+          onClose={() => setShowCharts(false)}
+        />
       )}
     </div>
   );
