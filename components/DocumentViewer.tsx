@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ReviewMetrics, GraphData } from '../types';
-import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare } from 'lucide-react';
+import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare, Bell, AlertCircle } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
 import { ResearchTimeline } from './ResearchTimeline';
 
@@ -31,7 +31,44 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graph
   const [selectedText, setSelectedText] = useState('');
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [showAlerts, setShowAlerts] = useState(false);
   const selectionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sample alerts data
+  const sampleAlerts = [
+    {
+      id: 1,
+      title: 'Minocycline Shows Promising Results in Neuropathic Pain',
+      source: 'PubMed',
+      date: '7 Dec 2025',
+      description: 'New clinical trial demonstrates minocycline efficacy in reducing neuropathic pain symptoms with minimal side effects in a cohort of 200 patients.',
+      link: 'https://pubmed.ncbi.nlm.nih.gov'
+    },
+    {
+      id: 2,
+      title: 'Novel Minocycline Derivatives Identified for Neuroinflammation',
+      source: 'Nature Neuroscience',
+      date: '7 Dec 2025',
+      description: 'Researchers identify novel minocycline derivatives that show enhanced blood-brain barrier penetration and reduced neuroinflammatory markers.',
+      link: 'https://nature.com'
+    },
+    {
+      id: 3,
+      title: 'Minocycline in Combination Therapy for Parkinson\'s Disease',
+      source: 'Journal of Neurology',
+      date: '6 Dec 2025',
+      description: 'Preliminary findings suggest minocycline combined with L-DOPA shows synergistic effects in slowing disease progression in Parkinson\'s patients.',
+      link: 'https://journals.springer.com'
+    },
+    {
+      id: 4,
+      title: 'Minocycline Bioavailability Enhancement Study',
+      source: 'Pharmaceutical Research',
+      date: '6 Dec 2025',
+      description: 'Study on enhanced formulations of minocycline demonstrates improved oral bioavailability and sustained plasma levels with new delivery systems.',
+      link: 'https://www.springer.com'
+    }
+  ];
 
   const handleRefine = async () => {
     if (!refineInput) return;
@@ -439,9 +476,60 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           
           <div className="h-6 w-px bg-slate-200 mx-2"></div>
           
-          <button onClick={handlePrint} className="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-white rounded-full transition-all hover:shadow-sm" title="Print / Save PDF">
-             <Printer className="w-4 h-4" />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowAlerts(!showAlerts)} 
+              className={`p-2.5 rounded-full transition-all relative ${showAlerts ? 'text-red-600 bg-red-50' : 'text-slate-500 hover:text-red-600 hover:bg-white'} hover:shadow-sm`}
+              title="View recent alerts and discoveries"
+            >
+              <Bell className="w-4 h-4" />
+              {sampleAlerts.length > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              )}
+            </button>
+            
+            {/* Alerts Dropdown */}
+            {showAlerts && (
+              <div className="absolute right-0 top-12 w-96 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 max-h-[500px] overflow-y-auto">
+                <div className="sticky top-0 bg-gradient-to-r from-red-50 to-orange-50 border-b border-slate-200 px-4 py-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <h3 className="font-bold text-slate-800">Recent Discoveries</h3>
+                  <span className="ml-auto text-xs font-semibold bg-red-100 text-red-700 px-2 py-1 rounded">
+                    {sampleAlerts.length} New
+                  </span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {sampleAlerts.map((alert) => (
+                    <button
+                      key={alert.id}
+                      onClick={() => {
+                        alert('Alert: ' + alert.title + '\n\n' + alert.description);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors group cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="mt-1 w-2 h-2 rounded-full bg-red-500 flex-shrink-0 group-hover:bg-red-600"></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 group-hover:text-teal-700 transition-colors line-clamp-2">
+                            {alert.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-slate-500">{alert.source}</span>
+                            <span className="text-xs text-slate-400">•</span>
+                            <span className="text-xs font-medium text-slate-600">{alert.date}</span>
+                          </div>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            {alert.description}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-teal-600 flex-shrink-0 mt-1" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
