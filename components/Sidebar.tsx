@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ResearchTemplate, DataSource, AgentRole, ResearchConfig } from '../types';
-import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft, Send, MessageCircle } from 'lucide-react';
+import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft, Send as SendIcon, MessageCircle, Loader2 } from 'lucide-react';
 import { chatWithDocument } from '../services/geminiService';
 import { executeResearchQuery } from '../services/apiService';
 
@@ -36,6 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<'ask' | 'research' | 'diagram'>('ask');
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [thinkingStep, setThinkingStep] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleCollapse = (collapsed: boolean) => {
@@ -133,9 +134,17 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     
     setInputValue('');
     setIsLoading(true);
+    setThinkingStep(0);
 
     try {
       let assistantResponse: string;
+
+      // Simulate thinking steps
+      setThinkingStep(1); // Analyzing
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      setThinkingStep(2); // Processing
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      setThinkingStep(3); // Generating
 
       // Check the chat mode
       if (chatMode === 'ask') {
@@ -251,6 +260,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       }
     } finally {
       setIsLoading(false);
+      setThinkingStep(0);
     }
   };
 
@@ -359,7 +369,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         </div>
       </div>
 
-      <div className={`p-6 space-y-8 flex-1 overflow-hidden transition-all duration-300 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`p-6 space-y-8 flex-1 overflow-y-auto transition-all duration-300 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         
         {step === 'results' ? (
           // Chat Interface
@@ -368,7 +378,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-lg p-3 text-sm ${
+                  {msg.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center shrink-0 mr-3 text-white text-xs font-bold">
+                      AI
+                    </div>
+                  )}
+                  <div className={`max-w-[75%] rounded-lg p-3 text-sm ${
                     msg.role === 'user'
                       ? 'bg-teal-600 text-white'
                       : 'bg-slate-100 text-slate-800'
@@ -378,13 +393,26 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 </div>
               ))}
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-slate-100 text-slate-800 rounded-lg p-3">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
+                <div className="flex gap-3 animate-in fade-in">
+                  <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                    AI
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    {thinkingStep >= 1 && (
+                      <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg animate-pulse">
+                        <Database size={13} /> Searching knowledge bases...
+                      </div>
+                    )}
+                    {thinkingStep >= 2 && (
+                      <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg animate-pulse">
+                        <Loader2 size={13} className="animate-spin" /> Analyzing & cross-referencing...
+                      </div>
+                    )}
+                    {thinkingStep >= 3 && (
+                      <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg animate-pulse">
+                        <FileText size={13} /> Synthesizing response...
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -392,12 +420,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             </div>
 
             {/* Chat Mode Selector */}
-            <div className="border-t border-slate-100 px-6 py-3 bg-white space-y-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chat Mode</p>
+            <div className="border-t border-slate-100 px-6 py-3 bg-white space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Mode</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setChatMode('ask')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'ask'
                       ? 'bg-teal-600 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -405,11 +433,11 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                   title="Ask questions about the document"
                 >
                   <MessageCircle className="w-3 h-3 inline mr-1" />
-                  Ask Question
+                  Ask
                 </button>
                 <button
                   onClick={() => setChatMode('research')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'research'
                       ? 'bg-teal-600 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -421,7 +449,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 </button>
                 <button
                   onClick={() => setChatMode('diagram')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'diagram'
                       ? 'bg-teal-600 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -436,7 +464,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
 
             {/* Chat Input */}
             <div className="border-t border-slate-100 px-6 py-4 bg-white">
-              <form onSubmit={handleChatSubmit} className="space-y-2">
+              <form onSubmit={handleChatSubmit} className="flex gap-2 items-end">
                 <input
                   type="text"
                   value={inputValue}
@@ -449,23 +477,16 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                       : 'Describe the diagram you want...'
                   }
                   disabled={isLoading}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
+                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
                 />
-                <div className="flex gap-2">
-                  <span className="text-xs text-slate-400 px-1.5 py-1 bg-slate-50 rounded flex items-center">
-                    {chatMode === 'ask' && '❓ Q&A Mode'}
-                    {chatMode === 'research' && '🔬 Research Mode'}
-                    {chatMode === 'diagram' && '📊 Diagram Mode'}
-                  </span>
-                  <button
-                    type="submit"
-                    disabled={isLoading || !inputValue.trim()}
-                    className="ml-auto p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title="Send message"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputValue.trim()}
+                  className="p-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                  title="Send message"
+                >
+                  <SendIcon className="w-4 h-4" />
+                </button>
               </form>
             </div>
           </div>
@@ -497,6 +518,42 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             onChange={(e) => setConfig({...config, topic: e.target.value})}
             disabled={step === 'results'}
           />
+          
+          {/* Chat Mode Selector - Integrated */}
+          <div className="pt-2 border-slate-100 space-y-2">
+            {/* <p className="text-xs font-semibold text-slate-600">Chat Mode for this Research</p> */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setChatMode('ask')}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                  chatMode === 'ask'
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-600'
+                }`}
+                title="Ask questions in chat"
+              >
+                <MessageCircle className="w-3 h-3 inline mr-1" />
+                Ask Question
+              </button>
+              <button
+                onClick={() => setChatMode('research')}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                  chatMode === 'research'
+                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-600'
+                }`}
+                title="Research and append to document"
+              >
+                <FlaskConical className="w-3 h-3 inline mr-1" />
+                Research
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400 px-1">
+              {chatMode === 'ask' 
+                ? '📌 Questions will be answered in chat' 
+                : '📌 Research results will be added to document'}
+            </p>
+          </div>
         </div>
 
         {/* Custom Data / File Upload */}
@@ -568,7 +625,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
+           {/* <div className="flex items-center gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
             <span className="text-slate-500 font-medium">Injection Point:</span>
             <select 
                 value={config.customDataSection}
@@ -580,8 +637,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 <option value="Results">Results Section</option>
                 <option value="Discussion">Discussion Section</option>
             </select>
-          </div>
-        </div>
+          </div> */}
+        </div> 
 
         <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
 
@@ -624,7 +681,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         </div>
 
         {/* Resources */}
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
            <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
             <Database className="w-4 h-4 text-teal-600" />
             <h3>Data Sources</h3>
@@ -651,7 +708,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
               </label>
             ))}
           </div>
-        </div>
+        </div> */}
           </>
         )}
 
