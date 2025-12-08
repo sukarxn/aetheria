@@ -1,17 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { GraphData } from '../types';
+import { MessageSquare, Zap, X, Trash2 } from 'lucide-react';
 
 interface KnowledgeGraphProps {
   data: GraphData;
+  onNodeExpand?: (nodeId: string, nodeName: string) => Promise<void>;
+  onAddToChat?: (nodeName: string) => void;
+  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
-const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data }) => {
+const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data, onNodeExpand, onAddToChat, onDeleteNode }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const [selectedNode, setSelectedNode] = useState<any | null>(null);
+  const [isExpanding, setIsExpanding] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Defensive check for data integrity
     if (!svgRef.current || !data || !Array.isArray(data.nodes) || data.nodes.length === 0) return;
+
+    console.log('🔄 KnowledgeGraph rendering with', data.nodes.length, 'nodes and', data.links.length, 'links');
 
     const width = 800;
     const height = 500;
@@ -86,7 +96,18 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data }) => {
       .attr("fill", (d: any) => (colors as any)[d.group] || '#94a3b8')
       .attr("stroke", "#fff")
       .attr("stroke-width", 2)
-      .attr("class", "shadow-sm cursor-grab active:cursor-grabbing");
+      .attr("class", "shadow-sm cursor-grab active:cursor-grabbing")
+      .on("click", function(event: any, d: any) {
+        event.stopPropagation();
+        setSelectedNode(d);
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (rect) {
+          setContextMenu({
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+          });
+        }
+      });
 
     // Labels
     nodeGroup.append("text")
@@ -168,6 +189,49 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data }) => {
 
   }, [data]);
 
+  const handleNodeExpand = async () => {
+    if (!selectedNode || !onNodeExpand) return;
+    setIsExpanding(true);
+    try {
+      await onNodeExpand(selectedNode.id, selectedNode.label);
+    } catch (error) {
+      console.error('Error expanding node:', error);
+    } finally {
+      setIsExpanding(false);
+      setContextMenu(null);
+      setSelectedNode(null);
+    }
+  };
+
+  const handleAddToChat = () => {
+    if (!selectedNode || !onAddToChat) return;
+    onAddToChat(selectedNode.label);
+    setContextMenu(null);
+    setSelectedNode(null);
+  };
+
+  const handleDeleteNode = async () => {
+    if (!selectedNode || !onDeleteNode) return;
+    try {
+      await onDeleteNode(selectedNode.id);
+    } catch (error) {
+      console.error('Error deleting node:', error);
+    } finally {
+      setContextMenu(null);
+      setSelectedNode(null);
+    }
+  };
+
+  React.useEffect(() => {
+    const handleOutsideClick = () => {
+      setContextMenu(null);
+    };
+    if (contextMenu) {
+      document.addEventListener('click', handleOutsideClick);
+      return () => document.removeEventListener('click', handleOutsideClick);
+    }
+  }, [contextMenu]);
+
   if (!data || !Array.isArray(data.nodes) || data.nodes.length === 0) {
       return (
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-400">
@@ -194,7 +258,69 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data }) => {
             <div>Scroll to zoom</div>
             <div>Drag to pan</div>
             <div>Click & drag nodes to move</div>
+            <div className="text-teal-600 font-medium mt-2">Click on node for options</div>
          </div>
+
+         {contextMenu && selectedNode && (
+           <div
+             ref={contextMenuRef}
+             className="absolute bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden z-50 animate-fade-in"
+             style={{
+               left: contextMenu.x,
+               top: contextMenu.y,
+               minWidth: '200px'
+             }}
+           >
+             <div className="p-3 border-b border-slate-100">
+               <div className="text-sm font-semibold text-slate-900 truncate">{selectedNode.label}</div>
+               <div className="text-xs text-slate-500 mt-1">Node Options</div>
+             </div>
+
+             <div className="space-y-1 p-2">
+               {onNodeExpand && (
+                 <button
+                   onClick={handleNodeExpand}
+                   disabled={isExpanding}
+                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 text-slate-700 text-sm font-medium transition-colors disabled:opacity-50"
+                 >
+                   <Zap size={16} className="text-amber-500" />
+                   {isExpanding ? 'Expanding...' : 'Expand Topic'}
+                 </button>
+               )}
+
+               {onAddToChat && (
+                 <button
+                   onClick={handleAddToChat}
+                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-teal-50 text-teal-700 text-sm font-medium transition-colors"
+                 >
+                   <MessageSquare size={16} />
+                   Add to Chat
+                 </button>
+               )}
+
+               {onDeleteNode && (
+                 <button
+                   onClick={handleDeleteNode}
+                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 text-red-700 text-sm font-medium transition-colors"
+                 >
+                   <Trash2 size={16} />
+                   Delete Node
+                 </button>
+               )}
+
+               <button
+                 onClick={() => {
+                   setContextMenu(null);
+                   setSelectedNode(null);
+                 }}
+                 className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-100 text-slate-700 text-sm transition-colors"
+               >
+                 <X size={16} />
+                 Close
+               </button>
+             </div>
+           </div>
+         )}
        </div>
     </div>
   );

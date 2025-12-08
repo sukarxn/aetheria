@@ -4,8 +4,8 @@ import TaskPlanner from './components/TaskPlanner';
 import DocumentViewer from './components/DocumentViewer';
 import TemplateSelection from './components/TemplateSelection';
 import LoginPage from './components/LoginPage';
-import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult } from './types';
-import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection } from './services/geminiService';
+import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult, GraphData } from './types';
+import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection, generateSubnodes } from './services/geminiService';
 import { executeResearchQuery } from './services/apiService';
 import { getProject, saveProject, updateProject, generateThreadId } from './utils/projectService';
 import { SupabaseTest } from './components/SupabaseTest';
@@ -197,6 +197,166 @@ const App = () => {
 
   const handleTextSelected = (text: string) => {
     setSelectedDocumentText(text);
+  };
+
+  // Handle knowledge graph node expand
+  const handleNodeExpand = async (nodeId: string, nodeName: string) => {
+    console.log('🔬 Expanding node:', nodeName, 'ID:', nodeId);
+    
+    if (!result) return;
+    
+    try {
+      // Generate subnodes for the expanded topic using Gemini API
+      const expandedNodeData = await generateSubnodes(nodeName);
+      
+      console.log('📊 Expanded node data:', expandedNodeData);
+      
+      // Parse the response to create new subnodes and links
+      const lines = expandedNodeData.split('\n').filter((line: string) => line.trim().length > 0);
+      const newNodes: typeof result.graph.nodes = [];
+      const newLinks: typeof result.graph.links = [];
+      
+      lines.forEach((line: string, index: number) => {
+        const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
+        if (cleanLine.length === 0) return;
+        
+        // Extract the label and type
+        const typeMatch = cleanLine.match(/\((.*?)\)/);
+        const label = cleanLine.replace(/\s*\(.*?\)\s*/, '').trim();
+        const type = typeMatch ? typeMatch[1] : 'Topic';
+        
+        // Map type to group number
+        const groupMap: {[key: string]: number} = {
+          'Drug': 1,
+          'Product': 1,
+          'Company': 2,
+          'Sponsor': 2,
+          'Disease': 3,
+          'Indication': 3,
+          'Patent': 4,
+          'Trial': 4,
+          'Technology': 1,
+          'Protein': 1,
+          'Gene': 1,
+          'Pathway': 1,
+          'Topic': 1
+        };
+        
+        const group = groupMap[type] || 1;
+        const subNodeId = `${nodeId}-sub-${index}`;
+        
+        // Add new subnode
+        newNodes.push({
+          id: subNodeId,
+          group: group,
+          label: label
+        });
+        
+        // Create link from parent node to subnode
+        newLinks.push({
+          source: nodeId,
+          target: subNodeId,
+          relation: 'related_to'
+        });
+      });
+      
+      // Update the graph with new nodes and links
+      const updatedGraph: GraphData = {
+        nodes: [...result.graph.nodes, ...newNodes],
+        links: [...result.graph.links, ...newLinks]
+      };
+      
+      // Update result with new graph
+      const updatedResult = {
+        ...result,
+        graph: updatedGraph
+      };
+      
+      setResult(updatedResult);
+      
+      // Save updated graph to Supabase if this is a saved project
+      if (selectedProjectId) {
+        try {
+          await updateProject(selectedProjectId, {
+            knowledge_graph: updatedGraph
+          });
+          console.log('✅ Knowledge graph updated in database');
+        } catch (updateError) {
+          console.error('❌ Failed to update knowledge graph:', updateError);
+        }
+      }
+      
+      // Also add a message to the chat about the expansion
+      const expandMessage = `Expand more details on: ${nodeName}`;
+      const userMessageTimestamp = new Date();
+      const userMessage = {
+        role: 'user' as const,
+        message: expandMessage,
+        timestamp: userMessageTimestamp.toISOString()
+      };
+      
+      const newChatHistory = [...chatHistoryRef.current, userMessage];
+      setChatHistory(newChatHistory);
+      chatHistoryRef.current = newChatHistory;
+      
+      // Call onChatMessage callback
+      await handleChatMessage({
+        role: 'user',
+        content: expandMessage,
+        timestamp: userMessageTimestamp
+      });
+      
+      console.log('✅ Node expanded with subnodes, graph and chat updated');
+    } catch (error) {
+      console.error('❌ Error expanding node:', error);
+      alert('Failed to expand node. Please try again.');
+    }
+  };
+
+  // Handle adding knowledge graph node to chat
+  const handleNodeAddToChat = (nodeName: string) => {
+    console.log('💬 Adding node to chat:', nodeName);
+    setSelectedDocumentText(nodeName);
+  };
+
+  // Handle deleting a node from the graph
+  const handleDeleteNode = async (nodeId: string) => {
+    console.log('🗑️ Deleting node:', nodeId);
+    
+    if (!result) return;
+    
+    try {
+      // Remove the node and all its connected links
+      const updatedGraph: GraphData = {
+        nodes: result.graph.nodes.filter(node => node.id !== nodeId),
+        links: result.graph.links.filter(link => link.source !== nodeId && link.target !== nodeId)
+      };
+      
+      // Update result with new graph
+      const updatedResult = {
+        ...result,
+        graph: updatedGraph
+      };
+      
+      setResult(updatedResult);
+      
+      // Save updated graph to Supabase if this is a saved project
+      if (selectedProjectId) {
+        try {
+          await updateProject(selectedProjectId, {
+            knowledge_graph: updatedGraph
+          });
+          console.log('✅ Node deleted and graph updated in database');
+        } catch (updateError) {
+          console.error('❌ Failed to update knowledge graph:', updateError);
+        }
+      }
+      
+      console.log('✅ Node deleted from graph');
+    } catch (error) {
+      console.error('❌ Error deleting node:', error);
+      alert('Failed to delete node. Please try again.');
+    }
   };
 
   // Handle new chat messages
@@ -546,6 +706,9 @@ const App = () => {
                     chatHistory={chatHistory}
                     onTimelineBranchClick={handleTimelineBranchClick}
                     onTextSelected={handleTextSelected}
+                    onNodeExpand={handleNodeExpand}
+                    onAddToChat={handleNodeAddToChat}
+                    onDeleteNode={handleDeleteNode}
                 />
             </div>
         )}

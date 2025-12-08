@@ -15,9 +15,12 @@ interface DocumentViewerProps {
   chatHistory?: any[];
   onTimelineBranchClick?: (query: string, index: number) => Promise<void>;
   onTextSelected?: (selectedText: string) => void;
+  onNodeExpand?: (nodeId: string, nodeName: string) => Promise<void>;
+  onAddToChat?: (content: string) => void;
+  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate, chatHistory = [], onTimelineBranchClick, onTextSelected }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate, chatHistory = [], onTimelineBranchClick, onTextSelected, onNodeExpand, onAddToChat, onDeleteNode }) => {
   const [refineInput, setRefineInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
@@ -661,7 +664,12 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
                       </div>
                   </div>
                   <div className="flex-1 bg-slate-50 relative">
-                      <KnowledgeGraph data={graphData} />
+                      <KnowledgeGraph 
+                        data={graphData}
+                        onNodeExpand={onNodeExpand}
+                        onAddToChat={onAddToChat}
+                        onDeleteNode={onDeleteNode}
+                      />
                   </div>
               </div>
           </div>

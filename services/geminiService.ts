@@ -61,6 +61,32 @@ Please provide a helpful, concise response (2-3 sentences max) that relates to t
   }
 };
 
+export const generateSubnodes = async (nodeName: string): Promise<string> => {
+  const model = "gemini-2.5-flash-lite";
+  
+  const prompt = `You are a knowledge graph expert in biomedical research. Generate 3-4 related entities, concepts, or research areas related to: "${nodeName}".
+
+Format each as a single line with the entity name and type in parentheses. Examples:
+- Entity Name (Drug)
+- Concept Name (Disease)
+- Research Area (Trial)
+
+Types can be: Drug, Company, Disease, Patent, Trial, Technology, Protein, Gene, Pathway, or Topic.
+
+Return ONLY the list of entities, one per line, no numbering or additional text.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+    });
+    return response.text || '';
+  } catch (error) {
+    console.error("Error generating subnodes:", error);
+    return '';
+  }
+};
+
 export const generateResearchPlan = async (config: ResearchConfig): Promise<Task[]> => {
   const model = "gemini-2.5-flash-lite"; 
   
