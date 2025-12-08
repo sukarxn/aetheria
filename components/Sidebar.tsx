@@ -32,6 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [chatMode, setChatMode] = useState<'ask' | 'research' | 'diagram'>('ask');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleCollapse = (collapsed: boolean) => {
@@ -304,25 +305,81 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Chat Mode Selector */}
+            <div className="border-t border-slate-100 px-6 py-3 bg-white space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chat Mode</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setChatMode('ask')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    chatMode === 'ask'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                  title="Ask questions about the document"
+                >
+                  <MessageCircle className="w-3 h-3 inline mr-1" />
+                  Ask Question
+                </button>
+                <button
+                  onClick={() => setChatMode('research')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    chatMode === 'research'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                  title="Perform further research"
+                >
+                  <FlaskConical className="w-3 h-3 inline mr-1" />
+                  Research
+                </button>
+                <button
+                  onClick={() => setChatMode('diagram')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    chatMode === 'diagram'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                  title="Create diagrams and visualizations"
+                >
+                  <Layers className="w-3 h-3 inline mr-1" />
+                  Diagram
+                </button>
+              </div>
+            </div>
+
             {/* Chat Input */}
             <div className="border-t border-slate-100 px-6 py-4 bg-white">
-              <form onSubmit={handleChatSubmit} className="flex gap-2">
+              <form onSubmit={handleChatSubmit} className="space-y-2">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask about the document..."
+                  placeholder={
+                    chatMode === 'ask' 
+                      ? 'Ask about the document...'
+                      : chatMode === 'research'
+                      ? 'What would you like to research?'
+                      : 'Describe the diagram you want...'
+                  }
                   disabled={isLoading}
-                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading || !inputValue.trim()}
-                  className="p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  title="Send message"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                  <span className="text-xs text-slate-400 px-1.5 py-1 bg-slate-50 rounded flex items-center">
+                    {chatMode === 'ask' && '❓ Q&A Mode'}
+                    {chatMode === 'research' && '🔬 Research Mode'}
+                    {chatMode === 'diagram' && '📊 Diagram Mode'}
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={isLoading || !inputValue.trim()}
+                    className="ml-auto p-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Send message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </form>
             </div>
           </div>
