@@ -223,6 +223,9 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
       contentText = String(contentText || '');
     }
 
+    // Remove leading and trailing quote characters
+    contentText = contentText.replace(/^["']|["']$/g, '');
+
     // Unescape JSON-encoded strings (handles \n, \", \\, etc.)
     contentText = contentText
       .replace(/\\n/g, '\n')           // Unescape newlines
