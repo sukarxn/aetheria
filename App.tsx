@@ -332,34 +332,42 @@ const App = () => {
       setResult(newResult);
       setStep('results');
 
-      // 3. Automatically save project to Supabase
+      // 3. Save/Update project in Supabase
       try {
-        const savedProject = await saveProject(userId, {
-          title: config.topic || 'Untitled Research Project',
-          generatedDocument: {
-            markdown: draftMarkdown,
-            content: draftMarkdown,
-            review: reviewData
-          },
-          chatHistory: chatHistory.length > 0 ? chatHistory : [{ role: 'system', message: 'Project created' }],
-          knowledgeGraph: graphData,
-          threadId,
-        });
-        
-        // Set selectedProjectId from the saved project so subsequent chat messages are saved
-        if (savedProject && savedProject.id && !selectedProjectId) {
-          setSelectedProjectId(savedProject.id);
-          console.log('✅ Project ID set for chat persistence:', savedProject.id);
+        if (selectedProjectId) {
+          // Update existing project
+          await updateProject(selectedProjectId, {
+            title: config.topic || 'Untitled Research Project',
+            generated_document: {
+              markdown: draftMarkdown,
+              content: draftMarkdown,
+              review: reviewData
+            },
+            knowledge_graph: graphData,
+            chat_history: chatHistory.length > 0 ? chatHistory : [{ role: 'system', message: 'Project created' }],
+          });
+          console.log('✅ Existing project updated with research results and knowledge graph:', selectedProjectId);
+        } else {
+          // Create new project
+          const savedProject = await saveProject(userId, {
+            title: config.topic || 'Untitled Research Project',
+            generatedDocument: {
+              markdown: draftMarkdown,
+              content: draftMarkdown,
+              review: reviewData
+            },
+            chatHistory: chatHistory.length > 0 ? chatHistory : [{ role: 'system', message: 'Project created' }],
+            knowledgeGraph: graphData,
+            threadId,
+          });
+          
+          if (savedProject && savedProject.id) {
+            setSelectedProjectId(savedProject.id);
+            console.log('✅ New project created with research results and knowledge graph:', savedProject.id);
+          }
         }
-        
-        console.log('Project automatically saved to database', {
-          title: config.topic,
-          markdownLength: draftMarkdown.length,
-          graphData: graphData,
-          reviewData: reviewData
-        });
       } catch (saveError) {
-        console.error('Failed to auto-save project:', saveError);
+        console.error('❌ Failed to save/update project:', saveError);
         // Don't alert - this is a background operation
       }
     } catch (e) {
