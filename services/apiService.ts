@@ -108,7 +108,7 @@ export const executeResearchQuery = async (queryText: string, threadId?: string,
     query: queryText,
     stream: false,
     thread_id: threadId || 'string',
-    internal_document: internalDocument || 'string'
+    internal_document: ''
   };
 
   try {

@@ -44,10 +44,13 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     onCollapsedChange?.(collapsed);
   };
 
-  // Auto-scroll to bottom when messages update
+  // Auto-scroll to bottom when messages update or thinking steps change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [messages, thinkingStep, isLoading]);
 
   // Initialize chat with welcome message or restore from history
   useEffect(() => {
@@ -317,18 +320,106 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     setUploadedFiles(prev => prev.filter(name => name !== fileName));
   };
 
+  const parseInlineMarkdown = (text: string, baseKey: string) => {
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let key = 0;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Simulate file reading/parsing
-      const mockContent = `\n\n--- [Attached File: ${file.name}] ---\n(Simulated extraction of internal document content...)\n[CONFIDENTIAL STRATEGY DATA]\n- Market Segment: Oncology\n- Target Growth: +15% YoY\n- Key Competitor: Compound Y\n-----------------------------------\n`;
-      
-      setConfig(prev => ({
-        ...prev,
-        customData: prev.customData ? prev.customData + mockContent : mockContent
-      }));
+    const regex = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`/g;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      if (match[1] !== undefined) {
+        parts.push(<strong key={`${baseKey}-bold-${key}`} className="font-bold text-slate-900">{match[1]}</strong>);
+      } else if (match[2] !== undefined) {
+        parts.push(<em key={`${baseKey}-italic-${key}`} className="italic text-slate-700">{match[2]}</em>);
+      } else if (match[3] !== undefined) {
+        parts.push(<code key={`${baseKey}-code-${key}`} className="bg-teal-100 px-1.5 py-0.5 rounded text-teal-700 font-mono text-xs">{match[3]}</code>);
+      }
+      key++;
+      lastIndex = regex.lastIndex;
     }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
+  const formatChatMarkdown = (text: string) => {
+    if (!text) return null;
+
+    // Remove leading and trailing quotes
+    let contentText = text.replace(/^["']|["']$/g, '');
+
+    // Unescape JSON-encoded strings
+    contentText = contentText
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+
+    const lines = (contentText || '').split('\n');
+    const result: JSX.Element[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+
+      if (trimmedLine === '') {
+        result.push(<div key={`space-${i}`} className="h-2"></div>);
+        i++;
+        continue;
+      }
+
+      // Headings
+      if (line.startsWith('# ')) {
+        result.push(
+          <h1 key={`h1-${i}`} className="text-xl font-bold text-slate-900 mt-3 mb-2">
+            {parseInlineMarkdown(line.replace('# ', ''), `h1-${i}`)}
+          </h1>
+        );
+      } else if (line.startsWith('## ')) {
+        result.push(
+          <h2 key={`h2-${i}`} className="text-lg font-bold text-slate-800 mt-3 mb-2 pb-2 border-b border-teal-200">
+            {parseInlineMarkdown(line.replace('## ', ''), `h2-${i}`)}
+          </h2>
+        );
+      } else if (line.startsWith('### ')) {
+        result.push(
+          <h3 key={`h3-${i}`} className="text-base font-bold text-teal-700 mt-2 mb-1 flex items-center gap-2">
+            <span className="w-0.5 h-4 bg-teal-500 rounded-full"></span>
+            {parseInlineMarkdown(line.replace('### ', ''), `h3-${i}`)}
+          </h3>
+        );
+      } else if (line.startsWith('- ')) {
+        result.push(
+          <li key={`li-${i}`} className="ml-4 list-disc text-slate-700 mb-1 pl-2 marker:text-teal-500 text-sm">
+            {parseInlineMarkdown(line.replace('- ', ''), `li-${i}`)}
+          </li>
+        );
+      } else if (line.startsWith('> ')) {
+        result.push(
+          <blockquote key={`quote-${i}`} className="border-l-3 border-teal-500 pl-3 italic text-slate-700 my-2 bg-teal-50/50 py-2 rounded-r text-sm">
+            {parseInlineMarkdown(line.replace('> ', ''), `quote-${i}`)}
+          </blockquote>
+        );
+      } else {
+        result.push(
+          <p key={`p-${i}`} className="text-slate-700 leading-relaxed mb-2 text-sm font-light">
+            {parseInlineMarkdown(line, `p-${i}`)}
+          </p>
+        );
+      }
+      i++;
+    }
+
+    return result;
   };
 
   return (
@@ -383,12 +474,18 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                       AI
                     </div>
                   )}
-                  <div className={`max-w-[75%] rounded-lg p-3 text-sm ${
+                  <div className={`max-w-[75%] rounded-lg p-4 text-sm ${
                     msg.role === 'user'
                       ? 'bg-teal-600 text-white'
                       : 'bg-slate-100 text-slate-800'
                   }`}>
-                    {msg.content}
+                    {msg.role === 'assistant' ? (
+                      <div className="space-y-1">
+                        {formatChatMarkdown(msg.content)}
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </div>
               ))}

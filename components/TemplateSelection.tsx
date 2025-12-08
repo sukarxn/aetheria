@@ -7,7 +7,7 @@ interface TemplateSelectionProps {
   onSelect: (template: ResearchTemplate) => void;
   userId?: string;
   onSelectProject?: (projectId: string) => void;
-  onCreateNew?: () => void;
+  onCreateNew?: () => Promise<void>;
 }
 
 interface Project {
@@ -56,6 +56,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({ onSelect, userId,
   const [error, setError] = useState('');
   const [showProjects, setShowProjects] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -75,6 +76,22 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({ onSelect, userId,
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateNewProject = async () => {
+    setIsCreatingProject(true);
+    try {
+      if (onCreateNew) {
+        await onCreateNew();
+      }
+      // Reload projects list after creation
+      await loadProjects();
+    } catch (err: any) {
+      console.error('Error creating project:', err);
+      setError('Failed to create new project');
+    } finally {
+      setIsCreatingProject(false);
     }
   };
 
@@ -160,12 +177,22 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = ({ onSelect, userId,
               {/* Create New Project Button */}
               <div className="mb-8">
                 <button
-                  onClick={onCreateNew}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-md text-sm font-medium 
+                  onClick={handleCreateNewProject}
+                  disabled={isCreatingProject}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium 
                              transition-colors duration-200 flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" />
-                  New Project
+                  {isCreatingProject ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Creating Project...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      New Project
+                    </>
+                  )}
                 </button>
               </div>
 

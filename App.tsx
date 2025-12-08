@@ -129,13 +129,39 @@ const App = () => {
     }
   };
 
-  const handleCreateNew = () => {
-    setSelectedProjectId(null);
-    setThreadId(generateThreadId());
-    setResult(null);
-    setChatHistory([]);
-    setHasSelectedTemplate(true);
-    setStep('setup');
+  const handleCreateNew = async () => {
+    try {
+      const newThreadId = generateThreadId();
+      setThreadId(newThreadId);
+      
+      // Create an empty project in Supabase immediately
+      const savedProject = await saveProject(userId, {
+        title: 'New Project',
+        generatedDocument: {
+          markdown: '',
+          content: '',
+          review: {}
+        },
+        chatHistory: [],
+        knowledgeGraph: {},
+        threadId: newThreadId,
+      });
+      
+      console.log('✅ New project created:', savedProject);
+      
+      if (savedProject && savedProject.id) {
+        setSelectedProjectId(savedProject.id);
+      }
+      
+      setResult(null);
+      setChatHistory([]);
+      chatHistoryRef.current = [];
+      setHasSelectedTemplate(true);
+      setStep('setup');
+    } catch (error) {
+      console.error('❌ Failed to create new project:', error);
+      alert('Failed to create new project');
+    }
   };
 
   const handleSaveProject = async (title: string) => {
@@ -308,7 +334,7 @@ const App = () => {
 
       // 3. Automatically save project to Supabase
       try {
-        await saveProject(userId, {
+        const savedProject = await saveProject(userId, {
           title: config.topic || 'Untitled Research Project',
           generatedDocument: {
             markdown: draftMarkdown,
@@ -319,6 +345,13 @@ const App = () => {
           knowledgeGraph: graphData,
           threadId,
         });
+        
+        // Set selectedProjectId from the saved project so subsequent chat messages are saved
+        if (savedProject && savedProject.id && !selectedProjectId) {
+          setSelectedProjectId(savedProject.id);
+          console.log('✅ Project ID set for chat persistence:', savedProject.id);
+        }
+        
         console.log('Project automatically saved to database', {
           title: config.topic,
           markdownLength: draftMarkdown.length,
