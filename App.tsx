@@ -7,7 +7,7 @@ import LoginPage from './components/LoginPage';
 import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult } from './types';
 import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection } from './services/geminiService';
 import { executeResearchQuery } from './services/apiService';
-import { getProject, saveProject, updateProject } from './utils/projectService';
+import { getProject, saveProject, updateProject, generateThreadId } from './utils/projectService';
 import { SupabaseTest } from './components/SupabaseTest';
 
 const App = () => {
@@ -39,6 +39,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
   const [selectedTimelineIndex, setSelectedTimelineIndex] = useState<number | undefined>();
   
@@ -75,6 +76,7 @@ const App = () => {
       if (project) {
         console.log('\n✅ Project loaded successfully');
         console.log('  - Title:', project.title);
+        console.log('  - Thread ID:', project.thread_id);
         console.log('  - Has generated_document:', !!project.generated_document);
         console.log('  - Has knowledge_graph:', !!project.knowledge_graph);
         console.log('  - Chat history length:', project.chat_history?.length || 0);
@@ -91,6 +93,7 @@ const App = () => {
         }
         
         setSelectedProjectId(projectId);
+        setThreadId(project.thread_id || generateThreadId());
         setConfig(prev => ({
           ...prev,
           topic: project.title || '',
@@ -128,6 +131,7 @@ const App = () => {
 
   const handleCreateNew = () => {
     setSelectedProjectId(null);
+    setThreadId(generateThreadId());
     setResult(null);
     setChatHistory([]);
     setHasSelectedTemplate(true);
@@ -142,6 +146,7 @@ const App = () => {
         generatedDocument: result,
         chatHistory,
         knowledgeGraph: result.graph,
+        threadId,
       });
       alert('Project saved successfully!');
     } catch (error) {
@@ -156,6 +161,7 @@ const App = () => {
     setTasks([]);
     setResult(null);
     setSelectedProjectId(null);
+    setThreadId(null);
     setChatHistory([]);
     chatHistoryRef.current = [];
     setConfig(prev => ({ ...prev, topic: '', customData: '' }));
@@ -229,10 +235,36 @@ const App = () => {
   const handleBackToProjects = () => {
     setHasSelectedTemplate(false);
     setSelectedProjectId(null);
+    setThreadId(null);
     setResult(null);
     setChatHistory([]);
     chatHistoryRef.current = [];
     setStep('setup');
+  };
+
+  // Handle research result - append to document
+  const handleAppendResearchResult = (researchContent: string) => {
+    if (!result) return;
+    
+    const appendedContent = result.markdown + '\n\n---\n\n## Research Results\n\n' + researchContent;
+    
+    setResult(prev => prev ? ({ ...prev, markdown: appendedContent }) : null);
+    
+    // Update database if this is a saved project
+    if (selectedProjectId) {
+      try {
+        updateProject(selectedProjectId, {
+          generated_document: {
+            markdown: appendedContent,
+            content: appendedContent,
+            review: result.review
+          }
+        });
+        console.log('✅ Research result appended to document in database');
+      } catch (updateError) {
+        console.error('❌ Failed to update document with research result:', updateError);
+      }
+    }
   };
 
   // 2. Generate Plan
@@ -256,7 +288,7 @@ const App = () => {
     setLoading(true);
     try {
       // 1. Generate Draft using external API instead of Gemini
-      const draftMarkdown = await executeResearchQuery(config.topic);
+      const draftMarkdown = await executeResearchQuery(config.topic, threadId || undefined);
       
       // 2. Parallel: Generate Graph & Review
       // We do this to provide a complete "Result" state.
@@ -285,6 +317,7 @@ const App = () => {
           },
           chatHistory: chatHistory.length > 0 ? chatHistory : [{ role: 'system', message: 'Project created' }],
           knowledgeGraph: graphData,
+          threadId,
         });
         console.log('Project automatically saved to database', {
           title: config.topic,
@@ -372,7 +405,7 @@ const App = () => {
     setLoading(true);
     
     try {
-      const branchResult = await executeResearchQuery(query);
+      const branchResult = await executeResearchQuery(query, threadId || undefined);
       
       const [graphData, reviewData] = await Promise.all([
         generateKnowledgeGraph(branchResult),
@@ -425,6 +458,7 @@ const App = () => {
         documentContent={result?.markdown || ''}
         onChatMessage={handleChatMessage}
         initialChatHistory={chatHistory}
+        onAppendResearchResult={handleAppendResearchResult}
       />
       
       <main className={`flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-[420px]'}`}>

@@ -109,8 +109,8 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     let lastIndex = 0;
     let key = 0;
 
-    // Match bold, italic, and inline code
-    const regex = /\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`/g;
+    // Match bold, italic, and inline code - order matters: bold before italic
+    const regex = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
@@ -119,15 +119,15 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
         parts.push(text.substring(lastIndex, match.index));
       }
 
-      // Add formatted match
-      if (match[1]) {
-        // Bold
+      // Add formatted match - check groups in order
+      if (match[1] !== undefined) {
+        // Bold: **text**
         parts.push(<strong key={`${baseKey}-bold-${key}`} className="font-bold text-slate-900">{match[1]}</strong>);
-      } else if (match[2]) {
-        // Italic
+      } else if (match[2] !== undefined) {
+        // Italic: *text*
         parts.push(<em key={`${baseKey}-italic-${key}`} className="italic text-slate-800">{match[2]}</em>);
-      } else if (match[3]) {
-        // Inline code
+      } else if (match[3] !== undefined) {
+        // Inline code: `text`
         parts.push(<code key={`${baseKey}-code-${key}`} className="bg-slate-100 px-2 py-1 rounded text-teal-700 font-mono text-sm">{match[3]}</code>);
       }
       key++;
@@ -142,6 +142,75 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     return parts.length > 0 ? parts : text;
   };
 
+  const parseTable = (lines: string[], startIndex: number): { table: JSX.Element; endIndex: number } | null => {
+    const currentLine = lines[startIndex].trim();
+    
+    // Check if this is a table header (has pipes)
+    if (!currentLine.includes('|')) return null;
+
+    // Look ahead for separator line
+    let idx = startIndex + 1;
+    while (idx < lines.length && lines[idx].trim() === '') {
+      idx++; // Skip empty lines
+    }
+
+    // Check for separator line
+    if (idx >= lines.length || !lines[idx].includes('|') || !lines[idx].includes('-')) {
+      return null;
+    }
+
+    const headerRow = currentLine.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+    
+    idx++; // Move past separator
+    const bodyRows: string[][] = [];
+
+    // Collect table rows until we hit an empty line or end
+    while (idx < lines.length) {
+      const rowLine = lines[idx].trim();
+      if (rowLine === '' || !rowLine.includes('|')) {
+        break;
+      }
+      const cells = rowLine.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+      if (cells.length === headerRow.length) {
+        bodyRows.push(cells);
+      }
+      idx++;
+    }
+
+    if (bodyRows.length === 0) {
+      return null;
+    }
+
+    const table = (
+      <div key={`table-${startIndex}`} className="overflow-x-auto my-6 rounded-lg border border-slate-200 shadow-sm">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-teal-50">
+              {headerRow.map((header, i) => (
+                <th key={`th-${i}`} className="border border-slate-200 px-4 py-3 text-left text-sm font-bold text-slate-800">
+                  {parseInlineMarkdown(header, `th-${i}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, rowIdx) => (
+              <tr key={`tr-${rowIdx}`} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                {row.map((cell, cellIdx) => (
+                  <td key={`td-${rowIdx}-${cellIdx}`} className="border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                    {parseInlineMarkdown(cell, `td-${rowIdx}-${cellIdx}`)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+
+    return { table, endIndex: idx };
+  };
+
   const formatMarkdown = (text: string | any) => {
     // Handle case where text is an object instead of string
     let contentText = text;
@@ -154,14 +223,22 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
       contentText = String(contentText || '');
     }
 
+    // Unescape JSON-encoded strings (handles \n, \", \\, etc.)
+    contentText = contentText
+      .replace(/\\n/g, '\n')           // Unescape newlines
+      .replace(/\\"/g, '"')            // Unescape quotes
+      .replace(/\\\\/g, '\\');         // Unescape backslashes
+
     const lines = (contentText || '').split('\n');
     const result: JSX.Element[] = [];
     let inCodeBlock = false;
     let codeContent = '';
     let codeLanguage = '';
+    let i = 0;
 
-    for (let i = 0; i < lines.length; i++) {
+    while (i < lines.length) {
       const line = lines[i];
+      const trimmedLine = line.trim();
 
       // Handle code blocks
       if (line.startsWith('```')) {
@@ -169,6 +246,8 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           inCodeBlock = true;
           codeLanguage = line.replace('```', '').trim();
           codeContent = '';
+          i++;
+          continue;
         } else {
           inCodeBlock = false;
           result.push(
@@ -176,40 +255,71 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
               <code>{codeContent}</code>
             </pre>
           );
+          i++;
+          continue;
         }
-        continue;
       }
 
       if (inCodeBlock) {
         codeContent += line + '\n';
+        i++;
         continue;
       }
 
-      // Skip empty lines
-      if (line.trim() === '') {
+      // Skip empty lines at the start (but track them for table detection)
+      if (trimmedLine === '') {
         result.push(<div key={`space-${i}`} className="h-4"></div>);
+        i++;
         continue;
+      }
+
+      // Try to parse table - check if this line has pipes
+      if (trimmedLine.includes('|')) {
+        const tableResult = parseTable(lines, i);
+        if (tableResult) {
+          result.push(tableResult.table);
+          i = tableResult.endIndex;
+          continue;
+        }
       }
 
       // Headings
       if (line.startsWith('# ')) {
         result.push(
           <h1 key={`h1-${i}`} className="text-5xl font-black text-slate-900 mt-16 mb-8 tracking-tight leading-tight">
-            {line.replace('# ', '')}
+            {parseInlineMarkdown(line.replace('# ', ''), `h1-${i}`)}
           </h1>
         );
       } else if (line.startsWith('## ')) {
         result.push(
           <h2 key={`h2-${i}`} className="text-3xl font-bold text-slate-800 mt-12 mb-6 pb-3 border-b-2 border-teal-500">
-            {line.replace('## ', '')}
+            {parseInlineMarkdown(line.replace('## ', ''), `h2-${i}`)}
           </h2>
         );
       } else if (line.startsWith('### ')) {
         result.push(
           <h3 key={`h3-${i}`} className="text-xl font-bold text-teal-700 mt-8 mb-4 flex items-center gap-2">
             <span className="w-1 h-6 bg-teal-500 rounded-full"></span>
-            {line.replace('### ', '')}
+            {parseInlineMarkdown(line.replace('### ', ''), `h3-${i}`)}
           </h3>
+        );
+      } else if (line.startsWith('#### ')) {
+        result.push(
+          <h4 key={`h4-${i}`} className="text-lg font-bold text-slate-800 mt-6 mb-3">
+            {parseInlineMarkdown(line.replace('#### ', ''), `h4-${i}`)}
+          </h4>
+        );
+      } else if (line.startsWith('##### ')) {
+        result.push(
+          <h5 key={`h5-${i}`} className="text-base font-bold text-slate-700 mt-4 mb-2">
+            {parseInlineMarkdown(line.replace('##### ', ''), `h5-${i}`)}
+          </h5>
+        );
+      } else if (line.startsWith('###### ')) {
+        result.push(
+          <h6 key={`h6-${i}`} className="text-sm font-bold text-slate-600 mt-3 mb-2">
+            {parseInlineMarkdown(line.replace('###### ', ''), `h6-${i}`)}
+          </h6>
         );
       }
       // Lists
@@ -236,6 +346,7 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           </p>
         );
       }
+      i++;
     }
 
     return result;

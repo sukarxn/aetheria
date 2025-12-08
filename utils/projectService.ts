@@ -1,12 +1,18 @@
 import { supabase } from './supabaseClient';
 
+// Generate a unique thread ID
+export function generateThreadId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // Save a new project
-export async function saveProject(userId: string, { title, generatedDocument, chatHistory, knowledgeGraph }: any) {
+export async function saveProject(userId: string, { title, generatedDocument, chatHistory, knowledgeGraph, threadId }: any) {
   const { data, error } = await supabase
     .from('projects')
     .insert([
       {
         user_id: userId,
+        thread_id: threadId || generateThreadId(),
         title,
         generated_document: generatedDocument,
         chat_history: chatHistory,

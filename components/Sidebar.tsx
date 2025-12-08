@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { ResearchTemplate, DataSource, AgentRole, ResearchConfig } from '../types';
 import { FlaskConical, Database, Users, FileText, Upload, Sparkles, X, FileUp, Layers, ArrowRight, ChevronLeft, Send, MessageCircle } from 'lucide-react';
 import { chatWithDocument } from '../services/geminiService';
+import { executeResearchQuery } from '../services/apiService';
 
 import pdfToText from 'react-pdftotext'
 
@@ -24,15 +25,17 @@ interface SidebarProps {
   documentContent?: string;
   onChatMessage?: (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => void;
   initialChatHistory?: any[];
+  onAppendResearchResult?: (content: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '', onChatMessage, initialChatHistory = [] }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '', onChatMessage, initialChatHistory = [], onAppendResearchResult }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState<'ask' | 'research' | 'diagram'>('ask');
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleCollapse = (collapsed: boolean) => {
@@ -132,8 +135,22 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     setIsLoading(true);
 
     try {
-      // Call geminiService with document context
-      const assistantResponse = await chatWithDocument(userMessageContent, documentContent);
+      let assistantResponse: string;
+
+      // Check if research mode is selected
+      if (chatMode === 'research') {
+        console.log('🔬 RESEARCH MODE: Calling executeResearchQuery');
+        assistantResponse = await executeResearchQuery(userMessageContent);
+        
+        // Append research result to document
+        if (onAppendResearchResult) {
+          console.log('📎 Appending research result to document');
+          onAppendResearchResult(assistantResponse);
+        }
+      } else {
+        // Default: Call geminiService with document context (for ask and diagram modes)
+        assistantResponse = await chatWithDocument(userMessageContent, documentContent);
+      }
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}`,
@@ -215,11 +232,29 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
 // Retrieved 2025-12-06, License - CC BY-SA 4.0
 
   const extractPDFText = (event) => {
-        const file = event.target.files[0]
-        pdfToText(file)
-            .then(text => console.log(text))
-            .catch(error => console.error("Failed to extract text from pdf"))
+        const files = event.target.files;
+        if (files) {
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            setUploadedFiles(prev => {
+              if (prev.includes(file.name)) {
+                return prev;
+              }
+              return [...prev, file.name];
+            });
+            pdfToText(file)
+                .then(text => {
+                  console.log('PDF extracted:', text);
+                  console.log('File name:', file.name);
+                })
+                .catch(error => console.error("Failed to extract text from pdf:", file.name, error))
+          }
+        }
     }
+
+  const removeFile = (fileName: string) => {
+    setUploadedFiles(prev => prev.filter(name => name !== fileName));
+  };
 
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,43 +453,76 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
           <div className="flex items-center justify-between text-slate-800 font-bold text-sm">
             <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-teal-600" />
-                <h3>Upload Internal Data Sources</h3>
+                <h3>Upload Additional Docuements</h3>
             </div>
             <span className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">Optional</span>
           </div>
           
-          <div className="relative group">
-            <textarea 
-                className="w-full h-24 p-4 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none resize-none font-mono text-slate-600 transition-all placeholder:text-slate-400"
-                placeholder="Paste raw experimental data or notes..."
-                value={config.customData}
-                onChange={(e) => setConfig({...config, customData: e.target.value})}
-                disabled={step === 'results'}
-            />
-            
+          <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center cursor-pointer transition-all hover:border-teal-300 hover:bg-teal-50/30 group"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.classList.add('border-teal-400', 'bg-teal-50');
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.classList.remove('border-teal-400', 'bg-teal-50');
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.currentTarget.classList.remove('border-teal-400', 'bg-teal-50');
+              const files = e.dataTransfer.files;
+              if (files?.length) {
+                extractPDFText({ target: { files } });
+              }
+            }}
+          >
             <input 
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
                 accept="application/pdf"
+                multiple
                 onChange={extractPDFText} 
             />
-            <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-3 right-3 p-2 bg-white border border-slate-200 rounded-lg hover:bg-teal-50 hover:border-teal-200 hover:text-teal-700 text-slate-400 transition-all shadow-sm active:scale-95"
-                title="Upload Mock PDF"
-                disabled={step === 'results'}
-            >
-                <FileUp className="w-4 h-4" />
-            </button>
+            <FileUp className="w-6 h-6 text-slate-300 mx-auto mb-2 group-hover:text-teal-500 transition-colors" />
+            <p className="text-xs font-semibold text-slate-600 group-hover:text-teal-600 transition-colors">
+              Drop PDFs here or click to upload
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1">Multiple PDF files allowed</p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+          {uploadedFiles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-600">Uploaded Documents ({uploadedFiles.length})</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {uploadedFiles.map((fileName, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-lg p-2.5 hover:bg-teal-100 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileUp className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                      <span className="text-xs font-medium text-teal-900 truncate">{fileName}</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(fileName);
+                      }}
+                      className="p-1 hover:bg-teal-200 rounded transition-colors text-teal-600 flex-shrink-0"
+                      title="Remove file"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
             <span className="text-slate-500 font-medium">Injection Point:</span>
             <select 
                 value={config.customDataSection}
                 onChange={(e) => setConfig({...config, customDataSection: e.target.value})}
-                className="bg-transparent font-bold text-slate-700 border-none p-0 focus:ring-0 cursor-pointer hover:text-teal-600 outline-none"
+                className="bg-white font-semibold text-slate-700 border border-slate-200 px-2 py-1 rounded focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 cursor-pointer hover:border-slate-300 outline-none transition-all"
                 disabled={step === 'results'}
             >
                 <option value="Methods">Methods Section</option>
