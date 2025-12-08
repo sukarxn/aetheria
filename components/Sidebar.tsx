@@ -137,46 +137,97 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     try {
       let assistantResponse: string;
 
-      // Check if research mode is selected
-      if (chatMode === 'research') {
-        console.log('🔬 RESEARCH MODE: Calling executeResearchQuery');
+      // Check the chat mode
+      if (chatMode === 'ask') {
+        console.log('❓ ASK QUESTION MODE: Calling executeResearchQuery and displaying in chatbox only');
         assistantResponse = await executeResearchQuery(userMessageContent);
         
-        // Append research result to document
-        if (onAppendResearchResult) {
-          console.log('📎 Appending research result to document');
-          onAppendResearchResult(assistantResponse);
-        }
-      } else {
-        // Default: Call geminiService with document context (for ask and diagram modes)
-        assistantResponse = await chatWithDocument(userMessageContent, documentContent);
-      }
-
-      const assistantMessage: Message = {
-        id: `msg-${Date.now()}`,
-        role: 'assistant',
-        content: assistantResponse,
-        timestamp: new Date()
-      };
-      console.log('📥 Adding assistant message to local state:', assistantMessage);
-      setMessages(prev => {
-        const updated = [...prev, assistantMessage];
-        console.log('📥 Local messages state updated - total:', updated.length);
-        return updated;
-      });
-      
-      // Call onChatMessage callback for assistant response
-      if (onChatMessage) {
-        console.log('🔴 CALLBACK FIRED: Sending ASSISTANT message to parent (App.tsx)', {
-          role: 'assistant',
-          contentPreview: assistantResponse.substring(0, 50),
-          timestamp: new Date().toISOString()
-        });
-        onChatMessage({
+        // Display full response in chatbox only (not in document)
+        const assistantMessage: Message = {
+          id: `msg-${Date.now()}`,
           role: 'assistant',
           content: assistantResponse,
           timestamp: new Date()
+        };
+        console.log('📥 Adding assistant message to chatbox:', assistantMessage);
+        setMessages(prev => {
+          const updated = [...prev, assistantMessage];
+          console.log('📥 Chatbox messages updated - total:', updated.length);
+          return updated;
         });
+        
+        // Notify parent about chatbox message
+        if (onChatMessage) {
+          console.log('🟢 CALLBACK FIRED: Sending ASK QUESTION response to parent');
+          onChatMessage({
+            role: 'assistant',
+            content: assistantResponse,
+            timestamp: new Date()
+          });
+        }
+      } else if (chatMode === 'research') {
+        console.log('🔬 RESEARCH MODE: Calling executeResearchQuery and appending to document');
+        assistantResponse = await executeResearchQuery(userMessageContent);
+        
+        // Append full response to document
+        if (onAppendResearchResult) {
+          console.log('📎 Appending full research result to document');
+          onAppendResearchResult(assistantResponse);
+        }
+        
+        // Extract first 100 words for chatbox preview
+        const words = assistantResponse.split(/\s+/);
+        const preview = words.slice(0, 100).join(' ') + (words.length > 100 ? '...' : '');
+        
+        const assistantMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: `📄 Research result appended to document.\n\nPreview:\n${preview}`,
+          timestamp: new Date()
+        };
+        console.log('📥 Adding research preview to chatbox');
+        setMessages(prev => {
+          const updated = [...prev, assistantMessage];
+          console.log('📥 Chatbox messages updated - total:', updated.length);
+          return updated;
+        });
+        
+        // Notify parent about research message
+        if (onChatMessage) {
+          console.log('🔬 CALLBACK FIRED: Sending RESEARCH response to parent');
+          onChatMessage({
+            role: 'assistant',
+            content: assistantMessage.content,
+            timestamp: new Date()
+          });
+        }
+      } else {
+        // Diagram mode: Call geminiService with document context
+        console.log('📊 DIAGRAM MODE: Calling chatWithDocument');
+        assistantResponse = await chatWithDocument(userMessageContent, documentContent);
+        
+        const assistantMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: assistantResponse,
+          timestamp: new Date()
+        };
+        console.log('📥 Adding diagram response to chatbox');
+        setMessages(prev => {
+          const updated = [...prev, assistantMessage];
+          console.log('📥 Chatbox messages updated - total:', updated.length);
+          return updated;
+        });
+        
+        // Notify parent about diagram message
+        if (onChatMessage) {
+          console.log('📊 CALLBACK FIRED: Sending DIAGRAM response to parent');
+          onChatMessage({
+            role: 'assistant',
+            content: assistantResponse,
+            timestamp: new Date()
+          });
+        }
       }
     } catch (error) {
       console.error('❌ Error calling chat API:', error);
