@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { ReviewMetrics, GraphData } from '../types';
-import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare, Bell, AlertCircle } from 'lucide-react';
+import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare, Bell, AlertCircle, Zap } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
 import { ResearchTimeline } from './ResearchTimeline';
 import ChartsViewer from './ChartsViewer';
+import MoleculeViewer from './MoleculeViewer';
 import { extractChartData } from '../services/geminiService';
 
 interface DocumentViewerProps {
@@ -40,6 +41,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graph
   const [showCharts, setShowCharts] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
   const [isLoadingCharts, setIsLoadingCharts] = useState(false);
+  const [showMolecule, setShowMolecule] = useState(false);
   const selectionMenuRef = useRef<HTMLDivElement>(null);
 
   // Sample alerts data
@@ -494,6 +496,14 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           </button>
 
           <button 
+            onClick={() => setShowMolecule(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-cyan-700 hover:bg-white rounded-full transition-all text-xs font-bold border border-transparent hover:border-slate-200 hover:shadow-sm"
+          >
+            <Zap className="w-4 h-4" />
+            Molecular Structure
+          </button>
+
+          <button 
             onClick={() => setShowTimeline(!showTimeline)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all text-xs font-bold border ${showTimeline ? 'bg-purple-50 text-purple-700 border-purple-100 shadow-inner' : 'text-slate-600 border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
           >
@@ -750,6 +760,13 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
         <ChartsViewer 
           charts={chartData}
           onClose={() => setShowCharts(false)}
+        />
+      )}
+
+      {/* Molecule Viewer Modal */}
+      {showMolecule && (
+        <MoleculeViewer 
+          onClose={() => setShowMolecule(false)}
         />
       )}
     </div>
