@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import TaskPlanner from './components/TaskPlanner';
 import DocumentViewer from './components/DocumentViewer';
@@ -6,6 +6,7 @@ import TemplateSelection from './components/TemplateSelection';
 import LoginPage from './components/LoginPage';
 import { ResearchConfig, ResearchTemplate, AgentRole, DataSource, Task, ResearchResult } from './types';
 import { generateResearchPlan, executeResearchDraft, generateKnowledgeGraph, reviewContent, refineSection } from './services/geminiService';
+import { executeResearchQuery } from './services/apiService';
 import { getProject, saveProject, updateProject } from './utils/projectService';
 import { SupabaseTest } from './components/SupabaseTest';
 
@@ -39,6 +40,10 @@ const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [selectedTimelineIndex, setSelectedTimelineIndex] = useState<number | undefined>();
+  
+  // CRITICAL FIX: Track current chat history with useRef to avoid stale closures
+  const chatHistoryRef = useRef<any[]>([]);
   
   // Data State
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -63,9 +68,28 @@ const App = () => {
   };
 
   const handleSelectProject = async (projectId: string) => {
+    console.log('\n🚀 LOADING PROJECT:');
+    console.log('  - Project ID:', projectId);
     try {
       const project = await getProject(projectId);
       if (project) {
+        console.log('\n✅ Project loaded successfully');
+        console.log('  - Title:', project.title);
+        console.log('  - Has generated_document:', !!project.generated_document);
+        console.log('  - Has knowledge_graph:', !!project.knowledge_graph);
+        console.log('  - Chat history length:', project.chat_history?.length || 0);
+        
+        if (project.chat_history && project.chat_history.length > 0) {
+          console.log('\n📋 CHAT HISTORY BEING RESTORED:');
+          console.log('  - Total messages:', project.chat_history.length);
+          console.log('  - Breakdown:');
+          project.chat_history.forEach((msg, idx) => {
+            console.log(`    [${idx}] ${msg.role.toUpperCase()}: ${msg.message?.substring(0, 40) || msg.content?.substring(0, 40)}...`);
+          });
+        } else {
+          console.log('⚠️ No chat history in loaded project');
+        }
+        
         setSelectedProjectId(projectId);
         setConfig(prev => ({
           ...prev,
@@ -90,12 +114,14 @@ const App = () => {
           graph: project.knowledge_graph || {},
           review: {}
         });
+        console.log('\n📥 Setting chat history state with', project.chat_history?.length || 0, 'messages');
         setChatHistory(project.chat_history || []);
+        chatHistoryRef.current = project.chat_history || [];
         setHasSelectedTemplate(true);
         setStep('results');
       }
     } catch (error) {
-      console.error('Failed to load project:', error);
+      console.error('❌ Failed to load project:', error);
       alert('Failed to load project');
     }
   };
@@ -131,22 +157,21 @@ const App = () => {
     setResult(null);
     setSelectedProjectId(null);
     setChatHistory([]);
+    chatHistoryRef.current = [];
     setConfig(prev => ({ ...prev, topic: '', customData: '' }));
   };
 
   // Handle new chat messages
   const handleChatMessage = async (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => {
-    console.log('🔵 handleChatMessage RECEIVED - Message details:', message);
+    console.log('\n═══════════════════════════════════════════════════════');
+    console.log('🔵 APP.TSX - handleChatMessage CALLBACK RECEIVED');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Message type:', message.role.toUpperCase());
+    console.log('Content preview:', message.content.substring(0, 80));
+    console.log('Timestamp:', message.timestamp instanceof Date ? message.timestamp.toISOString() : message.timestamp);
     
     // Ensure we have a valid timestamp
     const messageTimestamp = message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp);
-    
-    console.log('App.tsx - handleChatMessage received:', {
-      role: message.role,
-      contentLength: message.content.length,
-      content: message.content.substring(0, 50) + '...',
-      timestamp: messageTimestamp.toISOString()
-    });
     
     // Add to local chat history
     const newMessage = {
@@ -155,34 +180,50 @@ const App = () => {
       timestamp: messageTimestamp.toISOString()
     };
     
+    console.log('\n📝 Creating new message object:');
+    console.log('  - Role:', newMessage.role);
+    console.log('  - Content length:', newMessage.message.length);
+    console.log('  - Timestamp:', newMessage.timestamp);
+    
+    // CRITICAL FIX: Use useRef to avoid stale closure
     const newChatHistory = [
-      ...chatHistory,
+      ...chatHistoryRef.current,
       newMessage
     ];
     
-    console.log('App.tsx - Updated chat history:', {
-      totalMessages: newChatHistory.length,
-      messages: newChatHistory.map(m => ({ role: m.role, contentLength: m.message.length }))
-    });
+    console.log('\n📊 Chat History Update:');
+    console.log('  - Previous total:', chatHistoryRef.current.length);
+    console.log('  - New total:', newChatHistory.length);
+    console.log('  - Summary:', newChatHistory.map((m, idx) => `[${idx}] ${m.role.toUpperCase()}: ${m.message.substring(0, 30)}...`).join(' | '));
+    console.log('\n📋 FULL CHAT HISTORY BEFORE SETTING STATE:');
+    console.log(JSON.stringify(newChatHistory, null, 2));
     
-    console.log('App.tsx - New chat history array:', JSON.stringify(newChatHistory, null, 2));
-    
+    // Update both state and ref
     setChatHistory(newChatHistory);
+    chatHistoryRef.current = newChatHistory;
+    console.log('✅ setChatHistory called with', newChatHistory.length, 'messages');
+    console.log('🔗 chatHistoryRef.current updated to:', newChatHistory.length, 'messages');
 
     // Update database if this is a saved/loaded project
     if (selectedProjectId) {
+      console.log('\n🔄 DATABASE UPDATE:');
+      console.log('  - Updating project:', selectedProjectId);
+      console.log('  - Chat history messages:', newChatHistory.length);
       try {
-        console.log('App.tsx - About to update project with selectedProjectId:', selectedProjectId);
+        // Use newChatHistory which is current
         await updateProject(selectedProjectId, {
           chat_history: newChatHistory
         });
-        console.log('App.tsx - Chat history updated in database - Total messages:', newChatHistory.length);
+        console.log('✅ Chat history successfully updated in database');
+        console.log('   - Total messages saved:', newChatHistory.length);
       } catch (updateError) {
-        console.error('App.tsx - Failed to update chat history in database:', updateError);
+        console.error('❌ FAILED to update chat history in database:', updateError);
       }
     } else {
-      console.log('App.tsx - No selectedProjectId - chat will be saved when project is created', { selectedProjectId });
+      console.log('⚠️ NO selectedProjectId - chat NOT being saved to database yet');
+      console.log('   Project will save chat when created');
     }
+    console.log('═══════════════════════════════════════════════════════\n');
   };
 
   const handleBackToProjects = () => {
@@ -190,6 +231,7 @@ const App = () => {
     setSelectedProjectId(null);
     setResult(null);
     setChatHistory([]);
+    chatHistoryRef.current = [];
     setStep('setup');
   };
 
@@ -213,8 +255,8 @@ const App = () => {
   const handleExecuteResearch = async () => {
     setLoading(true);
     try {
-      // 1. Generate Draft
-      const draftMarkdown = await executeResearchDraft(config, tasks);
+      // 1. Generate Draft using external API instead of Gemini
+      const draftMarkdown = await executeResearchQuery(config.topic);
       
       // 2. Parallel: Generate Graph & Review
       // We do this to provide a complete "Result" state.
@@ -324,6 +366,32 @@ const App = () => {
     }
   };
 
+  // 6. Handle Timeline Branch Click
+  const handleTimelineBranchClick = async (query: string, index: number) => {
+    setSelectedTimelineIndex(index);
+    setLoading(true);
+    
+    try {
+      const branchResult = await executeResearchQuery(query);
+      
+      const [graphData, reviewData] = await Promise.all([
+        generateKnowledgeGraph(branchResult),
+        reviewContent(branchResult)
+      ]);
+
+      setResult({
+        markdown: branchResult,
+        graph: graphData,
+        review: reviewData
+      });
+    } catch (error) {
+      console.error('Error loading timeline branch:', error);
+      alert('Failed to load research branch');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // RENDER FLOW
   if (!isLoggedIn) {
     return <LoginPage onLogin={(role) => {
@@ -392,6 +460,8 @@ const App = () => {
                     onRefine={handleRefine}
                     onRegenerateGraph={handleRegenerateGraph}
                     onBackToProjects={selectedProjectId ? handleBackToProjects : undefined}
+                    chatHistory={chatHistory}
+                    onTimelineBranchClick={handleTimelineBranchClick}
                 />
             </div>
         )}

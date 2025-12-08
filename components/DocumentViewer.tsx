@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ReviewMetrics, GraphData } from '../types';
-import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw } from 'lucide-react';
+import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
+import { ResearchTimeline } from './ResearchTimeline';
 
 interface DocumentViewerProps {
   content: string;
@@ -11,17 +12,21 @@ interface DocumentViewerProps {
   onRegenerateGraph?: () => Promise<void>;
   onBackToProjects?: () => void;
   onChatUpdate?: (message: { role: string; message: string }) => void;
+  chatHistory?: any[];
+  onTimelineBranchClick?: (query: string, index: number) => Promise<void>;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate, chatHistory = [], onTimelineBranchClick }) => {
   const [refineInput, setRefineInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
   const [showSuggestedQuestions, setShowSuggestedQuestions] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isRegeneratingGraph, setIsRegeneratingGraph] = useState(false);
+  const [selectedTimelineIndex, setSelectedTimelineIndex] = useState<number | undefined>();
 
   const handleRefine = async () => {
     if (!refineInput) return;
@@ -261,6 +266,14 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
             <Network className="w-4 h-4" />
             Visual Graph
           </button>
+
+          <button 
+            onClick={() => setShowTimeline(!showTimeline)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all text-xs font-bold border ${showTimeline ? 'bg-purple-50 text-purple-700 border-purple-100 shadow-inner' : 'text-slate-600 border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
+          >
+            <GitBranch className="w-4 h-4" />
+            Research Timeline
+          </button>
           
           <button 
             onClick={() => setShowMetrics(!showMetrics)}
@@ -367,6 +380,44 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
                   </div>
                   <div className="flex-1 bg-slate-50 relative">
                       <KnowledgeGraph data={graphData} />
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Research Timeline Modal */}
+      {showTimeline && (
+          <div className="absolute inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+              <div className="bg-white w-full h-full max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-up">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                            <GitBranch className="w-5 h-5 text-purple-600" />
+                            Research Timeline
+                        </h3>
+                        <p className="text-xs text-slate-500">Track your research branches and queries over time</p>
+                      </div>
+                      <button onClick={() => setShowTimeline(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                            <X className="w-6 h-6 text-slate-500" />
+                        </button>
+                  </div>
+                  <div className="flex-1 bg-slate-50 overflow-y-auto p-6">
+                      {chatHistory && chatHistory.length > 0 ? (
+                          <ResearchTimeline 
+                              chatHistory={chatHistory} 
+                              onBranchClick={async (query, index) => {
+                                  setSelectedTimelineIndex(index);
+                                  if (onTimelineBranchClick) {
+                                      await onTimelineBranchClick(query, index);
+                                  }
+                              }}
+                              selectedIndex={selectedTimelineIndex}
+                          />
+                      ) : (
+                          <div className="flex items-center justify-center h-full text-slate-400">
+                              <p>No research queries yet</p>
+                          </div>
+                      )}
                   </div>
               </div>
           </div>

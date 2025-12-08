@@ -46,18 +46,26 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
 
   // Initialize chat with welcome message or restore from history
   useEffect(() => {
+    console.log('🟡 Sidebar useEffect: step changed to:', step, 'with initialChatHistory length:', initialChatHistory.length);
     if (step === 'results') {
+      console.log('📊 Sidebar useEffect: Processing results step');
       // If we have initial chat history, restore it
       if (initialChatHistory.length > 0) {
-        const restoredMessages: Message[] = initialChatHistory.map((msg, idx) => ({
-          id: `msg-${idx}`,
-          role: msg.role as 'user' | 'assistant',
-          content: msg.message || msg.content,
-          timestamp: new Date(msg.timestamp || new Date())
-        }));
+        console.log('📚 Sidebar: Attempting to restore chat history from database:', JSON.stringify(initialChatHistory, null, 2));
+        const restoredMessages: Message[] = initialChatHistory.map((msg, idx) => {
+          console.log(`📝 Sidebar: Restoring message ${idx}:`, { role: msg.role, contentPreview: (msg.message || msg.content)?.substring(0, 40), timestamp: msg.timestamp });
+          return {
+            id: `msg-${idx}`,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.message || msg.content,
+            timestamp: new Date(msg.timestamp || new Date())
+          };
+        });
+        console.log('✅ Sidebar: Restored messages count:', restoredMessages.length, 'Full restored messages:', JSON.stringify(restoredMessages, null, 2));
         setMessages(restoredMessages);
         console.log('Chat history restored from database:', restoredMessages.length, 'messages');
       } else if (messages.length === 0) {
+        console.log('💬 Sidebar: No chat history - creating welcome message');
         // Otherwise, add welcome message
         const welcomeMessage: Message = {
           id: `msg-${Date.now()}`,
@@ -66,6 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
           timestamp: new Date()
         };
         setMessages([welcomeMessage]);
+        console.log('✨ Sidebar: Welcome message added');
         
         // Notify parent about welcome message
         onChatMessage?.({
@@ -73,6 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
           content: welcomeMessage.content,
           timestamp: welcomeMessage.timestamp
         });
+      } else {
+        console.log('⚠️ Sidebar: Messages already exist (length:', messages.length, '), skipping initialization');
       }
     }
   }, [step]);
@@ -84,6 +95,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     const userMessageContent = inputValue;
     const userMessageTimestamp = new Date();
 
+    console.log('🟢 USER MESSAGE SUBMITTED:', { contentPreview: userMessageContent.substring(0, 50), timestamp: userMessageTimestamp.toISOString() });
+
     // Add user message
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -91,19 +104,18 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       content: userMessageContent,
       timestamp: userMessageTimestamp
     };
-    setMessages(prev => [...prev, userMessage]);
-    
-    console.log('Sidebar: User message being sent to parent callback', {
-      role: 'user',
-      content: userMessageContent.substring(0, 50),
-      timestamp: userMessageTimestamp.toISOString()
+    console.log('📤 Adding user message to local state:', userMessage);
+    setMessages(prev => {
+      const updated = [...prev, userMessage];
+      console.log('📤 Local messages state updated - total:', updated.length);
+      return updated;
     });
     
     // Call onChatMessage callback for user message - IMPORTANT: send immediately
     if (onChatMessage) {
-      console.log('🟢 Sidebar: Calling onChatMessage for USER message', {
+      console.log('🟢 CALLBACK FIRED: Sending USER message to parent (App.tsx)', {
         role: 'user',
-        content: userMessageContent.substring(0, 50),
+        contentPreview: userMessageContent.substring(0, 50),
         timestamp: userMessageTimestamp.toISOString()
       });
       onChatMessage({
@@ -112,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         timestamp: userMessageTimestamp
       });
     } else {
-      console.warn('Sidebar: onChatMessage callback not provided!');
+      console.warn('⛔ Sidebar: onChatMessage callback NOT PROVIDED!');
     }
     
     setInputValue('');
@@ -128,19 +140,18 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         content: assistantResponse,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      console.log('Sidebar: Assistant message being sent to parent callback', {
-        role: 'assistant',
-        content: assistantResponse.substring(0, 50),
-        timestamp: new Date().toISOString()
+      console.log('📥 Adding assistant message to local state:', assistantMessage);
+      setMessages(prev => {
+        const updated = [...prev, assistantMessage];
+        console.log('📥 Local messages state updated - total:', updated.length);
+        return updated;
       });
       
       // Call onChatMessage callback for assistant response
       if (onChatMessage) {
-        console.log('🔴 Sidebar: Calling onChatMessage for ASSISTANT message', {
+        console.log('🔴 CALLBACK FIRED: Sending ASSISTANT message to parent (App.tsx)', {
           role: 'assistant',
-          content: assistantResponse.substring(0, 50),
+          contentPreview: assistantResponse.substring(0, 50),
           timestamp: new Date().toISOString()
         });
         onChatMessage({
@@ -150,17 +161,19 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         });
       }
     } catch (error) {
-      console.error('Error calling chat API:', error);
+      console.error('❌ Error calling chat API:', error);
       const errorMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'assistant',
         content: 'Sorry, I encountered an error processing your message. Please try again.',
         timestamp: new Date()
       };
+      console.log('❌ Adding error message to local state');
       setMessages(prev => [...prev, errorMessage]);
       
       // Call onChatMessage callback for error message
       if (onChatMessage) {
+        console.log('❌ CALLBACK FIRED: Sending ERROR message to parent');
         onChatMessage({
           role: 'assistant',
           content: 'Sorry, I encountered an error processing your message. Please try again.',

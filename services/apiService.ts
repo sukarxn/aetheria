@@ -98,6 +98,55 @@ export const queryApi = {
   },
 };
 
+/**
+ * External Research API - For querying the EY research endpoint
+ */
+export const executeResearchQuery = async (queryText: string, threadId?: string, internalDocument?: string): Promise<string> => {
+  const url = 'https://ey-test.onrender.com/query';
+  
+  const requestBody = {
+    query: queryText,
+    stream: false,
+    thread_id: threadId || 'string',
+    internal_document: internalDocument || 'string'
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for research
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `API Error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    
+    // Extract the document/result from the response
+    // The API returns markdown in a 'response' field
+    const document = JSON.stringify(data.response);
+    
+    return typeof document === 'string' ? document : JSON.stringify(document, null, 2);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('External Research Query Error:', errorMessage);
+    throw error;
+  }
+};
+
 export default {
   apiCall,
   queryApi,
