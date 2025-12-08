@@ -42,6 +42,7 @@ const App = () => {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<any[]>([]);
   const [selectedTimelineIndex, setSelectedTimelineIndex] = useState<number | undefined>();
+  const [selectedDocumentText, setSelectedDocumentText] = useState('');
   
   // CRITICAL FIX: Track current chat history with useRef to avoid stale closures
   const chatHistoryRef = useRef<any[]>([]);
@@ -191,6 +192,11 @@ const App = () => {
     setChatHistory([]);
     chatHistoryRef.current = [];
     setConfig(prev => ({ ...prev, topic: '', customData: '' }));
+    setSelectedDocumentText('');
+  };
+
+  const handleTextSelected = (text: string) => {
+    setSelectedDocumentText(text);
   };
 
   // Handle new chat messages
@@ -500,6 +506,8 @@ const App = () => {
         onChatMessage={handleChatMessage}
         initialChatHistory={chatHistory}
         onAppendResearchResult={handleAppendResearchResult}
+        selectedDocumentText={selectedDocumentText}
+        onClearSelectedText={() => setSelectedDocumentText('')}
       />
       
       <main className={`flex-1 h-screen overflow-hidden flex flex-col relative transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-[420px]'}`}>
@@ -537,6 +545,7 @@ const App = () => {
                     onBackToProjects={selectedProjectId ? handleBackToProjects : undefined}
                     chatHistory={chatHistory}
                     onTimelineBranchClick={handleTimelineBranchClick}
+                    onTextSelected={handleTextSelected}
                 />
             </div>
         )}

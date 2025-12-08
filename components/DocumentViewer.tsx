@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ReviewMetrics, GraphData } from '../types';
-import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch } from 'lucide-react';
+import { Sparkles, BarChart2, Share2, Download, Network, X, Printer, ThumbsUp, ChevronRight, RotateCcw, GitBranch, Copy, MessageSquare } from 'lucide-react';
 import KnowledgeGraph from './KnowledgeGraph';
 import { ResearchTimeline } from './ResearchTimeline';
 
@@ -14,9 +14,10 @@ interface DocumentViewerProps {
   onChatUpdate?: (message: { role: string; message: string }) => void;
   chatHistory?: any[];
   onTimelineBranchClick?: (query: string, index: number) => Promise<void>;
+  onTextSelected?: (selectedText: string) => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate, chatHistory = [], onTimelineBranchClick }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graphData, onRefine, onRegenerateGraph, onBackToProjects, onChatUpdate, chatHistory = [], onTimelineBranchClick, onTextSelected }) => {
   const [refineInput, setRefineInput] = useState('');
   const [isRefining, setIsRefining] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
@@ -27,6 +28,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ content, metrics, graph
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
   const [isRegeneratingGraph, setIsRegeneratingGraph] = useState(false);
   const [selectedTimelineIndex, setSelectedTimelineIndex] = useState<number | undefined>();
+  const [selectedText, setSelectedText] = useState('');
+  const [showSelectionMenu, setShowSelectionMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const selectionMenuRef = useRef<HTMLDivElement>(null);
 
   const handleRefine = async () => {
     if (!refineInput) return;
@@ -72,6 +77,41 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
       ]);
     }
     setIsGeneratingQuestions(false);
+  };
+
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    
+    if (text && text.length > 0) {
+      setSelectedText(text);
+      
+      // Get selection position for menu placement
+      const range = selection?.getRangeAt(0);
+      const rect = range?.getBoundingClientRect();
+      
+      if (rect) {
+        setMenuPosition({
+          x: rect.left,
+          y: rect.top - 10
+        });
+        setShowSelectionMenu(true);
+      }
+    }
+  };
+
+  const handleAddToChat = () => {
+    if (selectedText && onTextSelected) {
+      onTextSelected(selectedText);
+      setShowSelectionMenu(false);
+    }
+  };
+
+  const handleSaveToNotes = () => {
+    // Copy to clipboard and show confirmation
+    navigator.clipboard.writeText(selectedText);
+    setShowSelectionMenu(false);
+    alert('Text copied to clipboard!');
   };
 
   const handleInputFocus = async () => {
@@ -407,7 +447,11 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
 
       {/* Main Content Area (Paper) */}
       <div className="flex-1 overflow-y-auto scroll-smooth relative px-4 md:px-0">
-        <div className="max-w-[850px] mx-auto bg-white min-h-[1100px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] my-12 p-16 md:p-20 rounded-none md:rounded-xl border border-slate-100 animate-fade-up">
+        <div 
+          className="max-w-[850px] mx-auto bg-white min-h-[1100px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] my-12 p-16 md:p-20 rounded-none md:rounded-xl border border-slate-100 animate-fade-up"
+          onMouseUp={handleTextSelection}
+          onTouchEnd={handleTextSelection}
+        >
            <div className="mb-12 border-b border-slate-100 pb-8 text-center">
               <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">BioMed Nexus Generated Report</span>
            </div>
@@ -417,6 +461,42 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
         {/* Footer spacer */}
         <div className="h-20"></div>
       </div>
+
+      {/* Text Selection Menu */}
+      {showSelectionMenu && selectedText && (
+        <div 
+          ref={selectionMenuRef}
+          className="fixed z-50 bg-white border border-slate-200 rounded-lg shadow-lg p-2 flex gap-2 animate-fade-in"
+          style={{
+            left: `${menuPosition.x}px`,
+            top: `${menuPosition.y}px`,
+            transform: 'translateY(-120%)'
+          }}
+        >
+          <button
+            onClick={handleAddToChat}
+            className="px-3 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded transition-colors flex items-center gap-1.5"
+            title="Add to chat"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Add to Chat
+          </button>
+          <button
+            onClick={handleSaveToNotes}
+            className="px-3 py-2 text-sm font-medium text-slate-700 hover:bg-amber-50 hover:text-amber-600 rounded transition-colors flex items-center gap-1.5"
+            title="Copy to notes"
+          >
+            <Copy className="w-4 h-4" />
+            Save to Notes
+          </button>
+          <button
+            onClick={() => setShowSelectionMenu(false)}
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Review Metrics Slide-over */}
       {showMetrics && metrics && (

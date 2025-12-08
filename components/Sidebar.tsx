@@ -26,9 +26,11 @@ interface SidebarProps {
   onChatMessage?: (message: { role: 'user' | 'assistant'; content: string; timestamp: Date }) => void;
   initialChatHistory?: any[];
   onAppendResearchResult?: (content: string) => void;
+  selectedDocumentText?: string;
+  onClearSelectedText?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '', onChatMessage, initialChatHistory = [], onAppendResearchResult }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, onReset, isGenerating, step, onCollapsedChange, documentContent = '', onChatMessage, initialChatHistory = [], onAppendResearchResult, selectedDocumentText = '', onClearSelectedText }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -100,7 +102,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessageContent = inputValue;
+    // Append selected document text to the user message
+    let userMessageContent = inputValue;
+    if (selectedDocumentText) {
+      userMessageContent = `${inputValue}\n\n[Reference from document: "${selectedDocumentText.substring(0, 150)}${selectedDocumentText.length > 150 ? '...' : ''}"]`;
+    }
+    
     const userMessageTimestamp = new Date();
 
     console.log('🟢 USER MESSAGE SUBMITTED:', { contentPreview: userMessageContent.substring(0, 50), timestamp: userMessageTimestamp.toISOString() });
@@ -135,7 +142,11 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       console.warn('⛔ Sidebar: onChatMessage callback NOT PROVIDED!');
     }
     
+    // Clear input and selected text
     setInputValue('');
+    if (onClearSelectedText) {
+      onClearSelectedText();
+    }
     setIsLoading(true);
     setThinkingStep(0);
 
@@ -152,7 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       // Check the chat mode
       if (chatMode === 'ask') {
         console.log('❓ ASK QUESTION MODE: Calling executeResearchQuery and displaying in chatbox only');
-        assistantResponse = await executeResearchQuery(userMessageContent);
+        assistantResponse = await executeResearchQuery(inputValue);
         
         // Display full response in chatbox only (not in document)
         const assistantMessage: Message = {
@@ -179,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         }
       } else if (chatMode === 'research') {
         console.log('🔬 RESEARCH MODE: Calling executeResearchQuery and appending to document');
-        assistantResponse = await executeResearchQuery(userMessageContent);
+        assistantResponse = await executeResearchQuery(inputValue);
         
         // Append full response to document
         if (onAppendResearchResult) {
@@ -560,7 +571,25 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             </div>
 
             {/* Chat Input */}
-            <div className="border-t border-slate-100 px-6 py-4 bg-white">
+            <div className="border-t border-slate-100 px-6 py-4 bg-white space-y-2">
+              {/* Selected Text Tag */}
+              {selectedDocumentText && (
+                <div className="px-3 py-2 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg">
+                  <span className="text-xs font-medium text-teal-700">Reference:</span>
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-teal-200 flex-1 min-w-0">
+                    <span className="text-xs text-slate-600 truncate">
+                      {selectedDocumentText.substring(0, 50)}...
+                    </span>
+                    <button
+                      onClick={onClearSelectedText}
+                      className="text-teal-600 hover:text-teal-700 ml-1 flex-shrink-0"
+                      title="Remove reference"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleChatSubmit} className="flex gap-2 items-end">
                 <input
                   type="text"
