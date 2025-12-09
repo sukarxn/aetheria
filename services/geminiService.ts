@@ -88,7 +88,7 @@ Return ONLY the list of entities, one per line, no numbering or additional text.
 };
 
 export const extractChartData = async (documentContent: string): Promise<any[]> => {
-  const model = "gemini-2.5-flash";
+  const model = "gemini-2.5-flash-lite";
   
   const prompt = `Analyze the pharmaceutical research document and extract data suitable for creating charts and visualizations.
 

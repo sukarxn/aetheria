@@ -511,14 +511,6 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
             Research Timeline
           </button>
           
-          <button 
-            onClick={() => setShowMetrics(!showMetrics)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-full transition-all text-xs font-bold border ${showMetrics ? 'bg-blue-50 text-blue-700 border-blue-100 shadow-inner' : 'text-slate-600 border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
-          >
-            <BarChart2 className="w-4 h-4" />
-            Review Insights
-          </button>
-          
           <div className="h-6 w-px bg-slate-200 mx-2"></div>
           
           <div className="relative">
