@@ -22,13 +22,13 @@ const ChartsViewer: React.FC<ChartsViewerProps> = ({ charts, onClose }) => {
 
   if (charts.length === 0) {
     return (
-      <div className="absolute inset-0 z-40 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-fade-up">
+      <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-fade-up border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-2">No Charts Available</h3>
           <p className="text-slate-600 mb-6">No visualizable data was found in the document. Try selecting a document with numerical data.</p>
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-medium transition-colors"
+            className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-medium transition-colors"
           >
             Close
           </button>
@@ -109,19 +109,19 @@ const ChartsViewer: React.FC<ChartsViewerProps> = ({ charts, onClose }) => {
   };
 
   return (
-    <div className="absolute inset-0 z-40 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
-      <div className="bg-white w-full h-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-up">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+      <div className="bg-white w-full h-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-up border border-slate-200">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100">
+        <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-white">
           <div>
-            <h3 className="font-bold text-lg text-slate-800">{currentChart.title}</h3>
-            <p className="text-sm text-slate-500 mt-1">{currentChart.description}</p>
+            <h3 className="font-bold text-lg text-slate-900">{currentChart.title}</h3>
+            <p className="text-sm text-slate-600 mt-1">{currentChart.description}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
           </button>
         </div>
 

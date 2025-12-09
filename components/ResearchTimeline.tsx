@@ -73,8 +73,8 @@ export const ResearchTimeline: React.FC<ResearchTimelineProps> = ({
   const branches = timelineNodes.filter(n => !n.isMainBranch);
 
   return (
-    <div className="p-4 bg-gradient-to-b from-slate-50 to-slate-100 rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
-      <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2 sticky top-0 bg-slate-50 pb-2">
+    <div className="p-4 bg-white rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
+      <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2 sticky top-0 bg-white pb-2">
         <GitBranch size={16} />
         Research Timeline
       </h3>
@@ -87,12 +87,12 @@ export const ResearchTimeline: React.FC<ResearchTimelineProps> = ({
               onClick={() => onBranchClick(mainNode.query, 0)}
               className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                 selectedIndex === 0
-                  ? 'border-blue-500 bg-blue-50 shadow-md'
-                  : 'border-slate-300 bg-white hover:border-blue-400 hover:shadow-sm'
+                  ? 'border-slate-800 bg-slate-50 shadow-md'
+                  : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm'
               }`}
             >
               <div className="flex items-start gap-2">
-                <BookOpen size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                <BookOpen size={16} className="text-slate-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-600">Main Research</p>
                   <p className="text-sm text-slate-800 line-clamp-2 break-words">
@@ -107,7 +107,7 @@ export const ResearchTimeline: React.FC<ResearchTimelineProps> = ({
 
             {/* Vertical Line to Branches */}
             {branches.length > 0 && (
-              <div className="w-0.5 h-6 bg-gradient-to-b from-blue-400 to-slate-300 my-2"></div>
+              <div className="w-0.5 h-6 bg-gradient-to-b from-slate-600 to-slate-300 my-2"></div>
             )}
           </div>
         )}
@@ -130,12 +130,12 @@ export const ResearchTimeline: React.FC<ResearchTimelineProps> = ({
                       onClick={() => onBranchClick(branch.query, chatIndex)}
                       className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                         selectedIndex === chatIndex
-                          ? 'border-purple-500 bg-purple-50 shadow-md'
-                          : 'border-slate-300 bg-white hover:border-purple-400 hover:shadow-sm'
+                          ? 'border-slate-800 bg-slate-50 shadow-md'
+                          : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm'
                       }`}
                     >
                       <div className="flex items-start gap-2">
-                        <GitBranch size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                        <GitBranch size={16} className="text-slate-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-slate-600">
                             Query {idx + 1}

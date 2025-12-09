@@ -43,41 +43,41 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Side - Medical Collage Background */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-slate-800 relative overflow-hidden items-center justify-center p-8">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-50 relative overflow-hidden items-center justify-center p-8 border-r border-slate-200">
         {/* Medical Collage Grid */}
         <div className="relative w-full h-full max-w-md">
           {/* Top Left - DNA/Molecular */}
-          <div className="absolute top-0 left-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             🧬
           </div>
           
           {/* Top Right - Microscope/Lab */}
-          <div className="absolute top-8 right-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute top-8 right-0 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             🔬
           </div>
           
           {/* Center Left - Heart/Health */}
-          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             ❤️
           </div>
           
           {/* Center - Medical Chart */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-5xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-5xl opacity-80 hover:opacity-100 transition-opacity">
             📊
           </div>
           
           {/* Center Right - Pills/Pharmacy */}
-          <div className="absolute top-1/2 right-0 -translate-y-1/2 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute top-1/2 right-0 -translate-y-1/2 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             💊
           </div>
           
           {/* Bottom Left - Research/Book */}
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             📚
           </div>
           
           {/* Bottom Right - Stethoscope */}
-          <div className="absolute bottom-8 right-0 w-32 h-32 bg-slate-700 rounded-lg shadow-lg flex items-center justify-center text-4xl opacity-90 hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-8 right-0 w-32 h-32 bg-white rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-4xl opacity-80 hover:opacity-100 transition-opacity">
             🩺
           </div>
         </div>
@@ -87,8 +87,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         
         {/* Bottom text */}
         <div className="absolute bottom-8 left-8 z-10">
-          <h2 className="text-2xl font-bold text-white mb-2">Biomed Nexus AI</h2>
-          <p className="text-slate-300 text-sm">Advanced Research Intelligence Platform</p>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Biomed Nexus AI</h2>
+          <p className="text-slate-600 text-sm">Advanced Research Intelligence Platform</p>
         </div>
       </div>
 

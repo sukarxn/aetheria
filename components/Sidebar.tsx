@@ -442,12 +442,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
       <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-20 min-h-[80px]">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-teal-500 to-teal-700 p-2.5 rounded-xl text-white shadow-lg shadow-teal-500/20">
+            <div className="bg-slate-800 p-2.5 rounded-xl text-white shadow-lg">
                <FlaskConical className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-lg tracking-tight text-slate-800 leading-none mb-1">BioMed Nexus</h1>
-              <p className="text-[10px] uppercase tracking-wider text-teal-600 font-bold">Research OS v2.0</p>
+              <h1 className="font-bold text-lg tracking-tight text-slate-900 leading-none mb-1">BioMed Nexus</h1>
+              <p className="text-[10px] uppercase tracking-wider text-slate-600 font-bold">Research OS v2.0</p>
             </div>
           </div>
         )}
@@ -481,13 +481,13 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center shrink-0 mr-3 text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 mr-3 text-white text-xs font-bold">
                       AI
                     </div>
                   )}
                   <div className={`max-w-[75%] rounded-lg p-4 text-sm ${
                     msg.role === 'user'
-                      ? 'bg-teal-600 text-white'
+                      ? 'bg-slate-800 text-white'
                       : 'bg-slate-100 text-slate-800'
                   }`}>
                     {msg.role === 'assistant' ? (
@@ -502,7 +502,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
               ))}
               {isLoading && (
                 <div className="flex gap-3 animate-in fade-in">
-                  <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center shrink-0 text-white text-xs font-bold">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-white text-xs font-bold">
                     AI
                   </div>
                   <div className="space-y-2 flex-1">
@@ -535,7 +535,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                   onClick={() => setChatMode('ask')}
                   className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'ask'
-                      ? 'bg-teal-600 text-white shadow-md'
+                      ? 'bg-slate-800 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                   title="Ask questions about the document"
@@ -547,7 +547,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                   onClick={() => setChatMode('research')}
                   className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'research'
-                      ? 'bg-teal-600 text-white shadow-md'
+                      ? 'bg-slate-800 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                   title="Perform further research"
@@ -559,7 +559,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                   onClick={() => setChatMode('diagram')}
                   className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     chatMode === 'diagram'
-                      ? 'bg-teal-600 text-white shadow-md'
+                      ? 'bg-slate-800 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                   title="Create diagrams and visualizations"
@@ -603,12 +603,12 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                       : 'Describe the diagram you want...'
                   }
                   disabled={isLoading}
-                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 disabled:opacity-50"
+                  className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400/30 focus:border-slate-800 disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !inputValue.trim()}
-                  className="p-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                  className="p-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   title="Send message"
                 >
                   <SendIcon className="w-4 h-4" />
@@ -638,7 +638,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             <h3>Research Topic / Target</h3>
           </div>
           <textarea 
-            className="w-full h-32 p-4 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none resize-none shadow-sm transition-all duration-200 ease-out placeholder:text-slate-300 group-hover:border-slate-300"
+            className="w-full h-32 p-4 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-400/20 focus:border-slate-800 outline-none resize-none shadow-sm transition-all duration-200 ease-out placeholder:text-slate-300 group-hover:border-slate-300"
             placeholder="Describe your research objective (e.g., 'Evaluate the therapeutic potential of compound X on target Y in the context of Z disease')..."
             value={config.topic}
             onChange={(e) => setConfig({...config, topic: e.target.value})}
@@ -653,8 +653,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 onClick={() => setChatMode('ask')}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
                   chatMode === 'ask'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-600'
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-md'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-700'
                 }`}
                 title="Ask questions in chat"
               >
@@ -665,8 +665,8 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 onClick={() => setChatMode('research')}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
                   chatMode === 'research'
-                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:text-teal-600'
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-md'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-700'
                 }`}
                 title="Research and append to document"
               >
@@ -692,7 +692,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
             <span className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 rounded-full text-slate-500">Optional</span>
           </div>
           
-          <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center cursor-pointer transition-all hover:border-teal-300 hover:bg-teal-50/30 group"
+          <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-center cursor-pointer transition-all hover:border-slate-400 hover:bg-slate-100/30 group"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault();
@@ -718,7 +718,7 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
                 multiple
                 onChange={extractPDFText} 
             />
-            <FileUp className="w-6 h-6 text-slate-300 mx-auto mb-2 group-hover:text-teal-500 transition-colors" />
+            <FileUp className="w-6 h-6 text-slate-300 mx-auto mb-2 group-hover:text-slate-600 transition-colors" />
             <p className="text-xs font-semibold text-slate-600 group-hover:text-teal-600 transition-colors">
               Drop PDFs here or click to upload
             </p>
