@@ -362,6 +362,75 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
     return parts.length > 0 ? parts : text;
   };
 
+  const parseTable = (lines: string[], startIndex: number): { table: JSX.Element; endIndex: number } | null => {
+    const currentLine = lines[startIndex].trim();
+    
+    // Check if this is a table header (has pipes)
+    if (!currentLine.includes('|')) return null;
+
+    // Look ahead for separator line
+    let idx = startIndex + 1;
+    while (idx < lines.length && lines[idx].trim() === '') {
+      idx++; // Skip empty lines
+    }
+
+    // Check for separator line
+    if (idx >= lines.length || !lines[idx].includes('|') || !lines[idx].includes('-')) {
+      return null;
+    }
+
+    const headerRow = currentLine.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+    
+    idx++; // Move past separator
+    const bodyRows: string[][] = [];
+
+    // Collect table rows until we hit an empty line or end
+    while (idx < lines.length) {
+      const rowLine = lines[idx].trim();
+      if (rowLine === '' || !rowLine.includes('|')) {
+        break;
+      }
+      const cells = rowLine.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+      if (cells.length === headerRow.length) {
+        bodyRows.push(cells);
+      }
+      idx++;
+    }
+
+    if (bodyRows.length === 0) {
+      return null;
+    }
+
+    const table = (
+      <div key={`table-${startIndex}`} className="overflow-x-auto my-3 rounded-lg border border-slate-200 shadow-sm">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-teal-50">
+              {headerRow.map((header, i) => (
+                <th key={`th-${i}`} className="border border-slate-200 px-3 py-2 text-left text-xs font-bold text-slate-800">
+                  {parseInlineMarkdown(header, `th-${i}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, rowIdx) => (
+              <tr key={`tr-${rowIdx}`} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                {row.map((cell, cellIdx) => (
+                  <td key={`td-${rowIdx}-${cellIdx}`} className="border border-slate-200 px-3 py-2 text-xs text-slate-700">
+                    {parseInlineMarkdown(cell, `td-${rowIdx}-${cellIdx}`)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+
+    return { table, endIndex: idx };
+  };
+
   const formatChatMarkdown = (text: string) => {
     if (!text) return null;
 
@@ -386,6 +455,16 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGeneratePlan, on
         result.push(<div key={`space-${i}`} className="h-2"></div>);
         i++;
         continue;
+      }
+
+      // Try to parse table - check if this line has pipes
+      if (trimmedLine.includes('|')) {
+        const tableResult = parseTable(lines, i);
+        if (tableResult) {
+          result.push(tableResult.table);
+          i = tableResult.endIndex;
+          continue;
+        }
       }
 
       // Headings
