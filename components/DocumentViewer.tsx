@@ -175,6 +175,99 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Create a temporary container for rendering
+      const element = document.createElement('div');
+      element.style.padding = '40px';
+      element.style.fontFamily = 'Arial, sans-serif';
+      element.style.lineHeight = '1.6';
+      element.style.backgroundColor = '#ffffff';
+      element.style.width = '800px';
+
+      // Parse markdown and convert to HTML
+      const htmlContent = content
+        .split('\n')
+        .map((line: string) => {
+          if (line.startsWith('# ')) {
+            return `<h1 style="color: #0f172a; font-size: 28px; margin: 20px 0 10px 0; font-weight: bold;">${line.replace('# ', '')}</h1>`;
+          } else if (line.startsWith('## ')) {
+            return `<h2 style="color: #1e293b; font-size: 22px; margin: 18px 0 8px 0; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">${line.replace('## ', '')}</h2>`;
+          } else if (line.startsWith('### ')) {
+            return `<h3 style="color: #334155; font-size: 16px; margin: 14px 0 6px 0; font-weight: bold;">${line.replace('### ', '')}</h3>`;
+          } else if (line.startsWith('- ')) {
+            return `<li style="margin-left: 20px; margin-bottom: 4px; color: #475569;">${line.replace('- ', '')}</li>`;
+          } else if (line.startsWith('> ')) {
+            return `<blockquote style="border-left: 4px solid #0d9488; padding-left: 12px; margin: 10px 0; color: #64748b; font-style: italic;">${line.replace('> ', '')}</blockquote>`;
+          } else if (line.trim() === '') {
+            return '<br>';
+          } else {
+            return `<p style="margin: 8px 0; color: #475569;">${line}</p>`;
+          }
+        })
+        .join('\n');
+
+      element.innerHTML = `
+        <div style="padding: 20px;">
+          <h1 style="color: #0f172a; margin-bottom: 30px; border-bottom: 3px solid #0d9488; padding-bottom: 15px; font-size: 32px;">
+            Research Document
+          </h1>
+          <div style="color: #334155;">
+            ${htmlContent}
+          </div>
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
+            <p style="margin: 4px 0;">Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p style="margin: 4px 0;">BioMed Nexus AI Platform</p>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(element);
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+      });
+      
+      document.body.removeChild(element);
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const imgWidth = 190;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10;
+      
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight - 20;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight - 20;
+      }
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      pdf.save(`research-document-${timestamp}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
   const handleInputFocus = async () => {
     if (!showSuggestedQuestions && suggestedQuestions.length === 0) {
       setShowSuggestedQuestions(true);
@@ -501,6 +594,15 @@ Return ONLY a JSON array of 5 questions strings, like: ["Question 1?", "Question
           >
             <Zap className="w-4 h-4" />
             Molecular Structure
+          </button>
+
+          <button 
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-green-700 hover:bg-white rounded-full transition-all text-xs font-bold border border-transparent hover:border-slate-200 hover:shadow-sm"
+            title="Download document as PDF"
+          >
+            <Download className="w-4 h-4" />
+            Download PDF
           </button>
 
           <button 
